@@ -260,7 +260,7 @@ function seedItems(){
       status: "active", history: [{ amount: 49.00, since: "2026-11-15" }] },
     { id: "seed-carpayment", name: "Car payment (American Credit)", amount: 405.95, date: "2026-11-16", repeat: "monthly",
       steps: "",
-      note: "Due on the 12th \u2014 you pay it around the 16th, when you get paid. The payment itself is about $396; the rest is their fee for paying. Bank shows $405.95 out on Oct 17.",
+      note: "Due on the 12th \u2014 you pay it around the 16th, when you get paid. The payment itself is $392.35; their fee for paying adds $13.60. Bank shows $405.95 out on Oct 17.",
       status: "active", history: [{ amount: 405.95, since: "2026-11-15" }] },
     { id: "seed-gamepass", name: "Jacob's Xbox Game Pass", amount: 25.23, date: "2026-11-22", repeat: "monthly",
       steps: stepsFor("game pass"),
@@ -286,7 +286,7 @@ function load(){
         var sv = 0;
         try { sv = parseInt(localStorage.getItem(KEY + ".seedsV") || "0", 10) || 0; } catch(e){}
         if (localStorage.getItem(KEY + ".seedsV2")) sv = Math.max(sv, 2);
-        if (sv < 7) {
+        if (sv < 8) {
           seedItems().forEach(function(s){
             if (!arr.some(function(x){ return x.id === s.id; })) arr.push(s);
           });
@@ -312,7 +312,14 @@ function load(){
               if (Array.isArray(x.history) && x.history.length) x.history[0].amount = 49.94;
             }
           });
-          try { localStorage.setItem(KEY + ".seedsV", "7"); save(arr); } catch(e){}
+          /* Round 8 puts the exact car payment in the note: $392.35 (Mary confirmed),
+             so their pay fee is $13.60 of the $405.95 that leaves her account. */
+          arr.forEach(function(x){
+            if (x.id === "seed-carpayment" && x.note && x.note.indexOf("about $396") !== -1) {
+              x.note = "Due on the 12th \u2014 you pay it around the 16th, when you get paid. The payment itself is $392.35; their fee for paying adds $13.60. Bank shows $405.95 out on Oct 17.";
+            }
+          });
+          try { localStorage.setItem(KEY + ".seedsV", "8"); save(arr); } catch(e){}
         }
         return arr;
       }
@@ -320,7 +327,7 @@ function load(){
   } catch(e){}
   var s = seedItems();
   save(s);
-  try { localStorage.setItem(KEY + ".seedsV", "7"); } catch(e){}
+  try { localStorage.setItem(KEY + ".seedsV", "8"); } catch(e){}
   return s;
 }
 function save(items){
