@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trials &amp; Subs — never get charged by surprise</title>
+<style>
+  :root{
+    --navy:#1f2a44; --navy-dark:#141c30; --gold:#f2b134; --gold-dark:#9a6b0f;
+    --paper:#fbf6ec; --red:#b3261e; --ink:#232323; --grey:#6b6f76; --line:#e3d9c4; --card:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+       background:var(--paper);color:var(--ink);font-size:19px;line-height:1.45;}
+  header{background:var(--navy);color:#fff;padding:24px 18px 20px;text-align:center;
+         border-bottom:6px solid var(--gold);}
+  header .bell{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;
+       border-radius:50%;background:var(--gold);font-size:34px;margin-bottom:8px;}
+  header h1{margin:0;font-size:32px;letter-spacing:.2px;}
+  header p{margin:6px 0 0;font-size:18px;opacity:.92;}
+  main{max-width:640px;margin:0 auto;padding:16px 14px 48px;}
+  .nextup{background:var(--navy);color:#fff;border-radius:14px;
+          padding:14px 16px;margin:6px 0 18px;box-shadow:0 3px 10px rgba(31,42,68,.25);}
+  .nextup .label{font-size:15px;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;font-weight:700;}
+  .nextup .big{font-size:24px;font-weight:700;margin-top:2px;}
+  .nextup .sub{color:#d8dce6;margin-top:2px;}
+  button{font:inherit;cursor:pointer;border-radius:12px;border:2px solid var(--navy);
+         background:var(--navy);color:#fff;padding:13px 18px;font-weight:600;min-height:52px;}
+  button.plain{background:#fff;color:var(--navy);}
+  button.small{padding:9px 12px;min-height:46px;font-size:17px;}
+  button.danger{border-color:var(--red);background:#fff;color:var(--red);}
+  #addBtn{width:100%;font-size:21px;margin:4px 0 18px;background:var(--gold);border-color:var(--gold-dark);color:var(--navy-dark);}
+  form{background:var(--card);border:1px solid var(--line);border-radius:14px;
+       padding:16px;margin-bottom:18px;}
+  form label{display:block;font-weight:600;margin:14px 0 6px;}
+  form label:first-child{margin-top:0;}
+  form input,form select,form textarea{width:100%;font:inherit;padding:12px;border:2px solid var(--line);
+       border-radius:10px;background:#fff;}
+  form textarea{min-height:96px;resize:vertical;}
+  .rowbtns{display:flex;gap:10px;margin-top:18px;}
+  .rowbtns button{flex:1;}
+  .hint{color:var(--grey);font-size:16px;margin-top:4px;}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:6px;
+        padding:0;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 6px rgba(31,42,68,.08);}
+  .item .tear{height:10px;background:repeating-linear-gradient(90deg,var(--gold) 0 14px,transparent 14px 28px);}
+  .item .body{padding:12px 16px 14px;}
+  .item .top{display:flex;gap:14px;align-items:flex-start;}
+  .dateblock{flex:0 0 64px;text-align:center;border:2px solid var(--navy);border-radius:10px;overflow:hidden;}
+  .dateblock .mo{background:var(--navy);color:#fff;font-size:14px;font-weight:700;
+       text-transform:uppercase;letter-spacing:1px;padding:2px 0;}
+  .dateblock .dy{font-size:28px;font-weight:800;line-height:1.15;padding:3px 0 5px;color:var(--navy-dark);}
+  .item .name{font-size:22px;font-weight:700;}
+  .item .amt{font-size:22px;font-weight:700;white-space:nowrap;margin-left:auto;}
+  .pill{display:inline-block;padding:3px 12px;border-radius:999px;font-weight:700;font-size:16px;
+        background:#fdf0d5;color:var(--gold-dark);margin-top:4px;}
+  .pill.far{background:#eef0f4;color:var(--navy);}
+  .pill.now{background:#fbe3e1;color:var(--red);}
+  .item .when{color:var(--grey);margin-top:2px;}
+  .pricehist{margin-top:8px;font-weight:600;color:var(--navy-dark);
+       background:#fdf6e0;border:1px dashed var(--gold-dark);border-radius:10px;padding:8px 12px;}
+  .item .note{background:#fdf6e0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;}
+  .item details{margin-top:10px;}
+  .item summary{font-weight:600;color:var(--navy);cursor:pointer;padding:6px 0;}
+  .item .steps{white-space:pre-wrap;background:#fffdf4;border:1px solid var(--line);
+        border-radius:10px;padding:10px 12px;margin-top:4px;}
+  .btnlink{display:block;text-align:center;text-decoration:none;font-weight:700;border-radius:12px;
+       padding:13px 18px;min-height:52px;margin-top:12px;background:var(--gold);
+       color:var(--navy-dark);border:2px solid var(--gold-dark);}
+  .item .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+  .done-sec{margin-top:26px;}
+  .done-sec h2{font-size:19px;color:var(--grey);}
+  .item.done{opacity:.6;}
+  .empty{background:var(--card);border:1px dashed var(--line);border-radius:14px;
+         padding:20px;text-align:center;color:var(--grey);}
+  footer{color:var(--grey);font-size:15px;text-align:center;padding:0 18px 30px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="bell">🔔</div>
+  <h1>Trials &amp; Subs</h1>
+  <p>Never get charged by surprise.</p>
+</header>
+<main>
+  <div class="nextup" id="nextUp"></div>
+
+  <button id="addBtn">＋ Add a trial or subscription</button>
+
+  <form id="addForm" hidden>
+    <input type="hidden" id="fId">
+    <label for="fName">What is it?</label>
+    <input id="fName" type="text" placeholder="Like: Etsy Pattern" autocomplete="off">
+    <label for="fAmt">How much?</label>
+    <input id="fAmt" type="number" step="0.01" min="0" inputmode="decimal" placeholder="15.00">
+    <label for="fDate">When does it charge?</label>
+    <input id="fDate" type="date">
+    <label for="fRepeat">How often?</label>
+    <select id="fRepeat">
+      <option value="none">Just this once</option>
+      <option value="monthly">Every month</option>
+      <option value="yearly">Every year</option>
+    </select>
+    <label for="fSteps">How do I cancel it? (the taps)</label>
+    <textarea id="fSteps" placeholder="The steps to cancel, so future-you doesn't have to hunt for them. Start typing a known name above and I'll fill this in when I know it."></textarea>
+    <label for="fNote">Anything to remember? (optional)</label>
+    <input id="fNote" type="text" placeholder="Like: only cancel after my EIN lands" autocomplete="off">
+    <div class="rowbtns">
+      <button type="submit" id="saveBtn">Save it</button>
+      <button type="button" class="plain" id="cancelBtn">Never mind</button>
+    </div>
+    <p class="hint">No bank login. No connecting accounts. It only knows what you type here.</p>
+  </form>
+
+  <div id="list"></div>
+  <div class="done-sec" id="doneSec"></div>
+</main>
+<footer>Trials &amp; Subs — a little list that watches your dates, so a surprise charge never does.</footer>
+
+<script>
+"use strict";
+var KEY = "beforeItCharges.v1";
+
+/* ---- Cancel-steps library: the taps, spelled out, for services people ask about most ---- */
+var CANCEL_LIBRARY = [
+  { match: ["etsy pattern", "pattern"],
+    steps: "In Etsy: Shop Manager \u2192 Pattern \u2192 Settings \u2192 \u201CCancel your Pattern site\u201D \u2192 tap \u201CNo thanks. Cancel Pattern.\u201D" },
+  { match: ["faxburner"],
+    steps: "In the FaxBurner app or at faxburner.com: open your Account \u2192 Subscription \u2192 Cancel the plan. Your fax number stays yours while the plan is paid up." },
+  { match: ["app store", "apple subscription", "icloud", "apple music", "apple tv"],
+    steps: "On your iPhone: Settings \u2192 tap your name at the very top \u2192 Subscriptions \u2192 tap the one you want \u2192 Cancel Subscription." },
+  { match: ["google play", "play store"],
+    steps: "In the Play Store app: tap your picture \u2192 Payments & subscriptions \u2192 Subscriptions \u2192 tap the one you want \u2192 Cancel subscription." },
+  { match: ["netflix"],
+    steps: "At netflix.com: tap your profile picture \u2192 Account \u2192 Cancel Membership \u2192 Finish Cancellation." },
+  { match: ["hulu"],
+    steps: "At hulu.com: profile picture \u2192 Account \u2192 scroll to Your Subscription \u2192 Cancel \u2192 keep going till it says you're cancelled." },
+  { match: ["spotify"],
+    steps: "At spotify.com: log in \u2192 Account \u2192 Your plan \u2192 Change or cancel \u2192 Cancel Premium." },
+  { match: ["amazon prime", "prime membership"],
+    steps: "At amazon.com: Account \u2192 Prime \u2192 Manage membership \u2192 End membership, and confirm on the next screens." },
+  { match: ["youtube premium", "youtube tv"],
+    steps: "At youtube.com: your picture \u2192 Purchases and memberships \u2192 tap the membership \u2192 Deactivate \u2192 Cancel." },
+  { match: ["paramount", "peacock", "discovery+", "discovery plus", "max", "hbo"],
+    steps: "If you signed up in an app store, cancel it there (see the Apple or Google Play steps). If you signed up on its own website: log in \u2192 Account \u2192 Subscription \u2192 Cancel." }
+];
+function stepsFor(name){
+  var n = (name || "").toLowerCase();
+  for (var i = 0; i < CANCEL_LIBRARY.length; i++){
+    for (var j = 0; j < CANCEL_LIBRARY[i].match.length; j++){
+      if (n.indexOf(CANCEL_LIBRARY[i].match[j]) !== -1) return CANCEL_LIBRARY[i].steps;
+    }
+  }
+  return "";
+}
+
+/* ---- "Take me there" links: the service's own subscription/account page.
+        One tap lands the person on the cancel door, signed in as themselves.
+        No passwords are ever held — that's the whole point. ---- */
+var CANCEL_LINKS = [
+  { match: ["etsy pattern", "pattern"], url: "https://www.etsy.com/your/shops/me/dashboard", label: "Take me to Etsy Shop Manager" },
+  { match: ["app store", "apple subscription", "icloud", "apple music", "apple tv"], url: "https://apps.apple.com/account/subscriptions", label: "Take me to my Apple subscriptions" },
+  { match: ["google play", "play store"], url: "https://play.google.com/store/account/subscriptions", label: "Take me to my Google Play subscriptions" },
+  { match: ["netflix"], url: "https://www.netflix.com/YourAccount", label: "Take me to my Netflix account" },
+  { match: ["hulu"], url: "https://secure.hulu.com/account", label: "Take me to my Hulu account" },
+  { match: ["spotify"], url: "https://www.spotify.com/account/", label: "Take me to my Spotify account" },
+  { match: ["amazon prime", "prime membership"], url: "https://www.amazon.com/gp/primecentral", label: "Take me to my Prime membership" },
+  { match: ["youtube premium", "youtube tv"], url: "https://www.youtube.com/paid_memberships", label: "Take me to my YouTube memberships" }
+];
+function linkFor(name){
+  var n = (name || "").toLowerCase();
+  for (var i = 0; i < CANCEL_LINKS.length; i++){
+    for (var j = 0; j < CANCEL_LINKS[i].match.length; j++){
+      if (n.indexOf(CANCEL_LINKS[i].match[j]) !== -1) return CANCEL_LINKS[i];
+    }
+  }
+  return null;
+}
+
+/* ---- Seed: Mary's own three, loaded the first time the page opens ---- */
+function seedItems(){
+  return [
+    { id: "seed-vibely", name: "Vibely Lite", amount: 10.00, date: "2026-12-01", repeat: "none",
+      steps: "",
+      note: "It holds the old Gift Keeper site \u2014 retire it last, when you're ready. Your call.",
+      status: "active", history: [{ amount: 10.00, since: "2026-11-15" }] },
+    { id: "seed-faxburner", name: "FaxBurner Professional", amount: 14.95, date: "2026-12-10", repeat: "monthly",
+      steps: stepsFor("FaxBurner"),
+      note: "Charges about the 10th. Cancel this ONLY after your EIN lands \u2014 you still need the fax number till then.",
+      status: "active", history: [{ amount: 14.95, since: "2026-11-15" }] },
+    { id: "seed-pattern", name: "Etsy Pattern", amount: 15.00, date: "2026-12-16", repeat: "monthly",
+      steps: stepsFor("Etsy Pattern"),
+      note: "Free until Dec 15 \u2014 the first $15 charge lands Dec 16.",
+      status: "active", history: [{ amount: 15.00, since: "2026-11-15" }] }
+  ];
+}
+
+function load(){
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) {
+      var arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        /* Older lists (from the first version) have no price memory yet — give them one. */
+        arr.forEach(function(it){
+          if (!Array.isArray(it.history) || !it.history.length) {
+            it.history = [{ amount: Number(it.amount) || 0, since: todayStr() }];
+          }
+        });
+        return arr;
+      }
+    }
+  } catch(e){}
+  var s = seedItems();
+  save(s);
+  return s;
+}
+function save(items){
+  try { localStorage.setItem(KEY, JSON.stringify(items)); } catch(e){}
+}
+
+/* ---- Date helpers (plain calendar math, in her timezone as the phone reports it) ---- */
+function todayStr(){
+  var d = new Date();
+  var m = "" + (d.getMonth() + 1), day = "" + d.getDate();
+  if (m.length < 2) m = "0" + m;
+  if (day.length < 2) day = "0" + day;
+  return d.getFullYear() + "-" + m + "-" + day;
+}
+function daysUntil(dateStr){
+  var a = new Date(todayStr() + "T00:00:00");
+  var b = new Date(dateStr + "T00:00:00");
+  return Math.round((b - a) / 86400000);
+}
+function prettyDate(dateStr){
+  var d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+}
+function money(n){ return "$" + Number(n).toFixed(2); }
+function rollForward(dateStr, repeat){
+  var d = new Date(dateStr + "T00:00:00");
+  if (repeat === "monthly") d.setMonth(d.getMonth() + 1);
+  else if (repeat === "yearly") d.setFullYear(d.getFullYear() + 1);
+  else return dateStr;
+  var m = "" + (d.getMonth() + 1), day = "" + d.getDate();
+  if (m.length < 2) m = "0" + m;
+  if (day.length < 2) day = "0" + day;
+  return d.getFullYear() + "-" + m + "-" + day;
+}
+function daysWord(n){
+  if (n < 0) return Math.abs(n) + (Math.abs(n) === 1 ? " day late" : " days late");
+  if (n === 0) return "charges TODAY";
+  if (n === 1) return "charges tomorrow";
+  return "in " + n + " days";
+}
+
+/* ---- Render ---- */
+var items = load();
+var listEl = document.getElementById("list");
+var doneEl = document.getElementById("doneSec");
+var nextEl = document.getElementById("nextUp");
+
+function render(){
+  var active = items.filter(function(i){ return i.status === "active"; });
+  active.sort(function(a,b){ return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+  var done = items.filter(function(i){ return i.status !== "active"; });
+
+  if (active.length === 0){
+    nextEl.innerHTML = '<div class="label">Coming up</div><div class="big">Nothing watching right now</div>' +
+      '<div class="sub">Add a trial or subscription above and it will sit here, watching its date.</div>';
+  } else {
+    var first = active[0];
+    var total30 = 0;
+    active.forEach(function(i){ if (daysUntil(i.date) <= 30) total30 += Number(i.amount); });
+    nextEl.innerHTML = '<div class="label">Next charge</div>' +
+      '<div class="big">' + esc(first.name) + " \u2014 " + money(first.amount) + "</div>" +
+      '<div class="sub">' + prettyDate(first.date) + " \u00B7 " + daysWord(daysUntil(first.date)) +
+      (total30 > 0 ? " \u00B7 " + money(total30) + " coming up in the next 30 days" : "") + "</div>";
+  }
+
+  if (active.length === 0){
+    listEl.innerHTML = '<div class="empty">Your list is empty. Tap the gold button up top to add the first one.</div>';
+  } else {
+    listEl.innerHTML = active.map(itemHtml).join("");
+  }
+
+  if (done.length){
+    doneEl.innerHTML = "<h2>Finished \u2014 cancelled or handled</h2>" + done.map(itemHtml).join("");
+  } else {
+    doneEl.innerHTML = "";
+  }
+  wireButtons();
+}
+function esc(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+function itemHtml(i){
+  var n = daysUntil(i.date);
+  var pillCls = i.status !== "active" ? "far" : (n <= 1 ? "now" : (n <= 7 ? "" : "far"));
+  var dparts = i.date.split("-");
+  var dobj = new Date(i.date + "T00:00:00");
+  var moShort = dobj.toLocaleDateString("en-US", { month: "short" });
+  var html = '<div class="item' + (i.status !== "active" ? " done" : "") + '">';
+  html += '<div class="tear"></div><div class="body">';
+  html += '<div class="top"><div class="dateblock"><div class="mo">' + moShort + '</div><div class="dy">' +
+    Number(dparts[2]) + '</div></div><div class="name">' + esc(i.name) + '</div><div class="amt">' + money(i.amount) + "</div></div>";
+  if (i.status === "active"){
+    html += '<span class="pill ' + pillCls + '">' + daysWord(n) + "</span>";
+    html += '<div class="when">' + prettyDate(i.date) +
+      (i.repeat === "monthly" ? " \u00B7 every month" : (i.repeat === "yearly" ? " \u00B7 every year" : " \u00B7 one time")) + "</div>";
+  } else {
+    html += '<div class="when">Was due ' + prettyDate(i.date) + "</div>";
+  }
+  if (Array.isArray(i.history) && i.history.length > 1) {
+    var firstAmt = Number(i.history[0].amount), curAmt = Number(i.amount);
+    var diff = Math.round((curAmt - firstAmt) * 100) / 100;
+    if (diff !== 0) {
+      html += '<div class="pricehist">' +
+        (diff > 0 ? "\uD83D\uDCC8 Price went UP " + money(diff) : "\uD83D\uDCC9 Price went DOWN " + money(Math.abs(diff))) +
+        " \u2014 it was " + money(firstAmt) + " when you added it.</div>";
+    }
+  }
+  if (i.note) html += '<div class="note">' + esc(i.note) + "</div>";
+  if (i.steps) html += "<details><summary>How to cancel it</summary><div class=\"steps\">" + esc(i.steps) + "</div></details>";
+  if (i.status === "active"){
+    var lk = linkFor(i.name);
+    if (lk) html += '<a class="btnlink" href="' + lk.url + '" target="_blank" rel="noopener">' + esc(lk.label) + " \u2192</a>";
+  }
+  html += '<div class="actions">';
+  if (i.status === "active"){
+    html += '<button class="small" data-act="cancelled" data-id="' + i.id + '">I cancelled it</button>';
+    html += '<button class="small plain" data-act="kept" data-id="' + i.id + '">' +
+      (i.repeat === "none" ? "I paid it / handled it" : "I'm keeping it") + "</button>";
+    html += '<button class="small plain" data-act="edit" data-id="' + i.id + '">Fix it</button>';
+    html += '<button class="small danger" data-act="del" data-id="' + i.id + '">Take it off</button>';
+  } else {
+    html += '<button class="small plain" data-act="back" data-id="' + i.id + '">Put it back</button>';
+    html += '<button class="small danger" data-act="del" data-id="' + i.id + '">Take it off</button>';
+  }
+  html += "</div></div></div>";
+  return html;
+}
+function wireButtons(){
+  var btns = document.querySelectorAll("[data-act]");
+  btns.forEach(function(b){
+    b.addEventListener("click", function(){
+      var id = b.getAttribute("data-id"), act = b.getAttribute("data-act");
+      var it = null;
+      items.forEach(function(x){ if (x.id === id) it = x; });
+      if (!it) return;
+      if (act === "cancelled"){ it.status = "cancelled"; }
+      else if (act === "kept"){
+        if (it.repeat === "none"){ it.status = "handled"; }
+        else {
+          it.date = rollForward(it.date, it.repeat);
+          while (daysUntil(it.date) < 0) it.date = rollForward(it.date, it.repeat);
+        }
+      }
+      else if (act === "back"){ it.status = "active"; }
+      else if (act === "del"){
+        if (window.confirm("Take " + it.name + " off the list for good?")) {
+          items = items.filter(function(x){ return x.id !== id; });
+        } else return;
+      }
+      else if (act === "edit"){ openForm(it); return; }
+      save(items);
+      render();
+    });
+  });
+}
+
+/* ---- Add / edit form ---- */
+var form = document.getElementById("addForm");
+var addBtn = document.getElementById("addBtn");
+var fId = document.getElementById("fId"), fName = document.getElementById("fName"),
+    fAmt = document.getElementById("fAmt"), fDate = document.getElementById("fDate"),
+    fRepeat = document.getElementById("fRepeat"), fSteps = document.getElementById("fSteps"),
+    fNote = document.getElementById("fNote");
+
+function openForm(it){
+  form.hidden = false;
+  if (it){
+    fId.value = it.id; fName.value = it.name; fAmt.value = it.amount;
+    fDate.value = it.date; fRepeat.value = it.repeat; fSteps.value = it.steps || "";
+    fNote.value = it.note || "";
+    document.getElementById("saveBtn").textContent = "Save the fix";
+  } else {
+    fId.value = ""; fName.value = ""; fAmt.value = ""; fDate.value = "";
+    fRepeat.value = "none"; fSteps.value = ""; fNote.value = "";
+    document.getElementById("saveBtn").textContent = "Save it";
+  }
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+  fName.focus();
+}
+addBtn.addEventListener("click", function(){ openForm(null); });
+document.getElementById("cancelBtn").addEventListener("click", function(){ form.hidden = true; });
+
+var stepsTouched = false;
+fSteps.addEventListener("input", function(){ stepsTouched = true; });
+fName.addEventListener("blur", function(){
+  if (!stepsTouched || !fSteps.value){
+    var s = stepsFor(fName.value);
+    if (s) fSteps.value = s;
+  }
+});
+
+form.addEventListener("submit", function(ev){
+  ev.preventDefault();
+  var name = fName.value.trim();
+  var amt = parseFloat(fAmt.value);
+  var date = fDate.value;
+  if (!name){ window.alert("Give it a name first \u2014 what is it?"); fName.focus(); return; }
+  if (isNaN(amt) || amt < 0){ window.alert("How much does it charge? Put the amount in."); fAmt.focus(); return; }
+  if (!date){ window.alert("When does it charge? Pick the date."); fDate.focus(); return; }
+  var rec = { name: name, amount: Math.round(amt * 100) / 100, date: date,
+              repeat: fRepeat.value, steps: fSteps.value.trim(), note: fNote.value.trim(),
+              status: "active" };
+  if (fId.value){
+    items.forEach(function(x){
+      if (x.id === fId.value){
+        if (!Array.isArray(x.history) || !x.history.length) {
+          x.history = [{ amount: Number(x.amount) || 0, since: todayStr() }];
+        }
+        if (Number(x.amount) !== rec.amount) {
+          x.history.push({ amount: rec.amount, since: todayStr() });
+        }
+        x.name = rec.name; x.amount = rec.amount; x.date = rec.date;
+        x.repeat = rec.repeat; x.steps = rec.steps; x.note = rec.note; x.status = "active";
+      }
+    });
+  } else {
+    rec.id = "it" + Date.now();
+    rec.history = [{ amount: rec.amount, since: todayStr() }];
+    items.push(rec);
+  }
+  stepsTouched = false;
+  save(items);
+  form.hidden = true;
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
