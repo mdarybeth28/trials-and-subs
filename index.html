@@ -144,6 +144,8 @@ var CANCEL_LIBRARY = [
     steps: "At amazon.com: Account \u2192 Prime \u2192 Manage membership \u2192 End membership, and confirm on the next screens." },
   { match: ["youtube premium", "youtube tv"],
     steps: "At youtube.com: your picture \u2192 Purchases and memberships \u2192 tap the membership \u2192 Deactivate \u2192 Cancel." },
+  { match: ["game pass", "xbox"],
+    steps: "At account.microsoft.com: Services & subscriptions \u2192 find Xbox Game Pass \u2192 Manage \u2192 Cancel, and confirm." },
   { match: ["paramount", "peacock", "discovery+", "discovery plus", "max", "hbo"],
     steps: "If you signed up in an app store, cancel it there (see the Apple or Google Play steps). If you signed up on its own website: log in \u2192 Account \u2192 Subscription \u2192 Cancel." }
 ];
@@ -168,7 +170,8 @@ var CANCEL_LINKS = [
   { match: ["hulu"], url: "https://secure.hulu.com/account", label: "Take me to my Hulu account" },
   { match: ["spotify"], url: "https://www.spotify.com/account/", label: "Take me to my Spotify account" },
   { match: ["amazon prime", "prime membership"], url: "https://www.amazon.com/gp/primecentral", label: "Take me to my Prime membership" },
-  { match: ["youtube premium", "youtube tv"], url: "https://www.youtube.com/paid_memberships", label: "Take me to my YouTube memberships" }
+  { match: ["youtube premium", "youtube tv"], url: "https://www.youtube.com/paid_memberships", label: "Take me to my YouTube memberships" },
+  { match: ["game pass", "xbox"], url: "https://account.microsoft.com/services", label: "Take me to my Microsoft subscriptions" }
 ];
 function linkFor(name){
   var n = (name || "").toLowerCase();
@@ -195,10 +198,10 @@ function seedItems(){
       steps: stepsFor("Etsy Pattern"),
       note: "Free until Dec 15 \u2014 the first $15 charge lands Dec 16.",
       status: "active", history: [{ amount: 15.00, since: "2026-11-15" }] },
-    { id: "seed-band", name: "Jacob's Band Payment", amount: 50.00, date: "2026-12-08", repeat: "monthly",
+    { id: "seed-band", name: "Jacob's Band Payment (AMRO Music)", amount: 49.94, date: "2026-12-09", repeat: "monthly",
       steps: "",
-      note: "On autopay \u2014 your reminder to keep the money in the bank.",
-      status: "active", history: [{ amount: 50.00, since: "2026-11-15" }] },
+      note: "On autopay. Shows on your bank as AMRO MUSIC \u2014 $49.94 on Oct 9.",
+      status: "active", history: [{ amount: 49.94, since: "2026-11-15" }] },
     { id: "seed-appledev", name: "Apple Developer Program", amount: 99.00, date: "2027-11-10", repeat: "yearly",
       steps: "",
       note: "Your Apple developer membership \u2014 all four apps live under it.",
@@ -258,7 +261,11 @@ function seedItems(){
     { id: "seed-carpayment", name: "Car payment (American Credit)", amount: 405.95, date: "2026-11-16", repeat: "monthly",
       steps: "",
       note: "Due on the 12th \u2014 you pay it around the 16th, when you get paid. The payment itself is about $396; the rest is their fee for paying. Bank shows $405.95 out on Oct 17.",
-      status: "active", history: [{ amount: 405.95, since: "2026-11-15" }] }
+      status: "active", history: [{ amount: 405.95, since: "2026-11-15" }] },
+    { id: "seed-gamepass", name: "Jacob's Xbox Game Pass", amount: 25.23, date: "2026-11-22", repeat: "monthly",
+      steps: stepsFor("game pass"),
+      note: "Jacob's subscription. Shows on your bank as MICROSOFT*XBOX GAME \u2014 $25.23 on Oct 22.",
+      status: "active", history: [{ amount: 25.23, since: "2026-11-15" }] }
   ];
 }
 
@@ -279,7 +286,7 @@ function load(){
         var sv = 0;
         try { sv = parseInt(localStorage.getItem(KEY + ".seedsV") || "0", 10) || 0; } catch(e){}
         if (localStorage.getItem(KEY + ".seedsV2")) sv = Math.max(sv, 2);
-        if (sv < 6) {
+        if (sv < 7) {
           seedItems().forEach(function(s){
             if (!arr.some(function(x){ return x.id === s.id; })) arr.push(s);
           });
@@ -293,7 +300,19 @@ function load(){
               }
             });
           });
-          try { localStorage.setItem(KEY + ".seedsV", "6"); save(arr); } catch(e){}
+          /* Round 7 fixes the band payment: the seed guessed $50 on Dec 8 from a calendar
+             note, but her bank shows AMRO MUSIC $49.94 on Oct 9 — correct only a copy
+             still holding the exact guessed values. */
+          arr.forEach(function(x){
+            if (x.id === "seed-band" && Number(x.amount) === 50 && x.date === "2026-12-08") {
+              x.name = "Jacob's Band Payment (AMRO Music)";
+              x.amount = 49.94;
+              x.date = "2026-12-09";
+              x.note = "On autopay. Shows on your bank as AMRO MUSIC \u2014 $49.94 on Oct 9.";
+              if (Array.isArray(x.history) && x.history.length) x.history[0].amount = 49.94;
+            }
+          });
+          try { localStorage.setItem(KEY + ".seedsV", "7"); save(arr); } catch(e){}
         }
         return arr;
       }
@@ -301,7 +320,7 @@ function load(){
   } catch(e){}
   var s = seedItems();
   save(s);
-  try { localStorage.setItem(KEY + ".seedsV", "6"); } catch(e){}
+  try { localStorage.setItem(KEY + ".seedsV", "7"); } catch(e){}
   return s;
 }
 function save(items){
