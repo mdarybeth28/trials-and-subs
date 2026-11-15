@@ -254,7 +254,11 @@ function seedItems(){
     { id: "seed-walmartplus", name: "Walmart+", amount: 49.00, date: "2027-01-16", repeat: "yearly",
       steps: "In the Walmart app: Account \u2192 Walmart+ \u2192 Manage (under Your Membership) \u2192 cancel.",
       note: "Walmart+ Assist Annual, $49 plus tax. Read from your Walmart app Nov 15 \u2014 renews Jan 16, 2027.",
-      status: "active", history: [{ amount: 49.00, since: "2026-11-15" }] }
+      status: "active", history: [{ amount: 49.00, since: "2026-11-15" }] },
+    { id: "seed-carpayment", name: "Car payment (American Credit)", amount: 405.95, date: "2026-11-16", repeat: "monthly",
+      steps: "",
+      note: "Due on the 12th \u2014 you pay it around the 16th, when you get paid. The payment itself is about $396; the rest is their fee for paying. Bank shows $405.95 out on Oct 17.",
+      status: "active", history: [{ amount: 405.95, since: "2026-11-15" }] }
   ];
 }
 
@@ -275,7 +279,7 @@ function load(){
         var sv = 0;
         try { sv = parseInt(localStorage.getItem(KEY + ".seedsV") || "0", 10) || 0; } catch(e){}
         if (localStorage.getItem(KEY + ".seedsV2")) sv = Math.max(sv, 2);
-        if (sv < 5) {
+        if (sv < 6) {
           seedItems().forEach(function(s){
             if (!arr.some(function(x){ return x.id === s.id; })) arr.push(s);
           });
@@ -289,7 +293,7 @@ function load(){
               }
             });
           });
-          try { localStorage.setItem(KEY + ".seedsV", "5"); save(arr); } catch(e){}
+          try { localStorage.setItem(KEY + ".seedsV", "6"); save(arr); } catch(e){}
         }
         return arr;
       }
@@ -297,7 +301,7 @@ function load(){
   } catch(e){}
   var s = seedItems();
   save(s);
-  try { localStorage.setItem(KEY + ".seedsV", "5"); } catch(e){}
+  try { localStorage.setItem(KEY + ".seedsV", "6"); } catch(e){}
   return s;
 }
 function save(items){
