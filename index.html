@@ -193,7 +193,19 @@ function seedItems(){
     { id: "seed-pattern", name: "Etsy Pattern", amount: 15.00, date: "2026-12-16", repeat: "monthly",
       steps: stepsFor("Etsy Pattern"),
       note: "Free until Dec 15 \u2014 the first $15 charge lands Dec 16.",
-      status: "active", history: [{ amount: 15.00, since: "2026-11-15" }] }
+      status: "active", history: [{ amount: 15.00, since: "2026-11-15" }] },
+    { id: "seed-band", name: "Jacob's Band Payment", amount: 50.00, date: "2026-12-08", repeat: "monthly",
+      steps: "",
+      note: "On autopay \u2014 your reminder to keep the money in the bank.",
+      status: "active", history: [{ amount: 50.00, since: "2026-11-15" }] },
+    { id: "seed-appledev", name: "Apple Developer Program", amount: 99.00, date: "2027-11-10", repeat: "yearly",
+      steps: "",
+      note: "Your Apple developer membership \u2014 all four apps live under it.",
+      status: "active", history: [{ amount: 99.00, since: "2026-11-15" }] },
+    { id: "seed-whatdimake-domain", name: "whatdimake.com domain", amount: 11.08, date: "2027-10-23", repeat: "yearly",
+      steps: "",
+      note: "Porkbun, auto-renew on. Your tracker lives at this address.",
+      status: "active", history: [{ amount: 11.08, since: "2026-11-15" }] }
   ];
 }
 
@@ -209,12 +221,21 @@ function load(){
             it.history = [{ amount: Number(it.amount) || 0, since: todayStr() }];
           }
         });
+        /* Second seed round (2026-11-15): her standing charges join lists saved by the
+           first version — once only, so anything she later takes off stays off. */
+        if (!localStorage.getItem(KEY + ".seedsV2")) {
+          seedItems().forEach(function(s){
+            if (!arr.some(function(x){ return x.id === s.id; })) arr.push(s);
+          });
+          try { localStorage.setItem(KEY + ".seedsV2", "1"); save(arr); } catch(e){}
+        }
         return arr;
       }
     }
   } catch(e){}
   var s = seedItems();
   save(s);
+  try { localStorage.setItem(KEY + ".seedsV2", "1"); } catch(e){}
   return s;
 }
 function save(items){
