@@ -101,6 +101,7 @@
     <select id="fRepeat">
       <option value="none">Just this once</option>
       <option value="monthly">Every month</option>
+      <option value="biweekly">Every 2 weeks (payday)</option>
       <option value="yearly">Every year</option>
     </select>
     <label for="fSteps">How do I cancel it? (the taps)</label>
@@ -202,22 +203,54 @@ function seedItems(){
       steps: "",
       note: "Your Apple developer membership \u2014 all four apps live under it.",
       status: "active", history: [{ amount: 99.00, since: "2026-11-15" }] },
-    { id: "seed-whatdimake-domain", name: "whatdimake.com domain", amount: 11.08, date: "2027-10-23", repeat: "yearly",
+    { id: "seed-whatdimake-domain", name: "whatdimake.com domain", amount: 11.81, date: "2027-10-23", repeat: "yearly",
       steps: "",
       note: "Porkbun, auto-renew on. Your tracker lives at this address.",
-      status: "active", history: [{ amount: 11.08, since: "2026-11-15" }] },
-    { id: "seed-buddy-domain", name: "myinventorybuddy.com domain", amount: 11.08, date: "2027-11-01", repeat: "yearly",
+      status: "active", history: [{ amount: 11.81, since: "2026-11-15" }] },
+    { id: "seed-buddy-domain", name: "myinventorybuddy.com domain", amount: 11.81, date: "2027-11-01", repeat: "yearly",
       steps: "",
       note: "Porkbun, auto-renew on. Inventory Buddy lives at this address.",
-      status: "active", history: [{ amount: 11.08, since: "2026-11-15" }] },
-    { id: "seed-gift-domain", name: "giftkeepersecret.com domain", amount: 11.08, date: "2027-11-08", repeat: "yearly",
+      status: "active", history: [{ amount: 11.81, since: "2026-11-15" }] },
+    { id: "seed-gift-domain", name: "giftkeepersecret.com domain", amount: 11.81, date: "2027-11-08", repeat: "yearly",
       steps: "",
       note: "Porkbun, auto-renew on. Gift Keeper lives at this address.",
-      status: "active", history: [{ amount: 11.08, since: "2026-11-15" }] },
-    { id: "seed-pet-domain", name: "yourpetkeeper.com domain", amount: 11.08, date: "2027-11-08", repeat: "yearly",
+      status: "active", history: [{ amount: 11.81, since: "2026-11-15" }] },
+    { id: "seed-pet-domain", name: "yourpetkeeper.com domain", amount: 11.81, date: "2027-11-08", repeat: "yearly",
       steps: "",
       note: "Porkbun, auto-renew on. Pet Keeper lives at this address.",
-      status: "active", history: [{ amount: 11.08, since: "2026-11-15" }] }
+      status: "active", history: [{ amount: 11.81, since: "2026-11-15" }] },
+    { id: "seed-verizon", name: "Verizon", amount: 168.74, date: "2026-11-30", repeat: "monthly",
+      steps: "",
+      note: "Phone bill. Read from your bank: $168.74 on Oct 30.",
+      status: "active", history: [{ amount: 168.74, since: "2026-11-15" }] },
+    { id: "seed-onstar", name: "OnStar", amount: 54.13, date: "2026-12-02", repeat: "monthly",
+      steps: "",
+      note: "Read from your bank: $54.13 on Nov 2.",
+      status: "active", history: [{ amount: 54.13, since: "2026-11-15" }] },
+    { id: "seed-prime", name: "Amazon Prime", amount: 7.65, date: "2026-12-04", repeat: "monthly",
+      steps: stepsFor("Amazon Prime"),
+      note: "Read from your bank: $7.65 on Nov 4 \u2014 less than full Prime, so it may be a channel or a discounted plan.",
+      status: "active", history: [{ amount: 7.65, since: "2026-11-15" }] },
+    { id: "seed-siriusxm", name: "SiriusXM", amount: 3.28, date: "2026-12-07", repeat: "monthly",
+      steps: "",
+      note: "Read from your bank: $3.28 on Nov 7.",
+      status: "active", history: [{ amount: 3.28, since: "2026-11-15" }] },
+    { id: "seed-apple", name: "Apple (iCloud)", amount: 0.99, date: "2026-12-07", repeat: "monthly",
+      steps: stepsFor("iCloud"),
+      note: "Read from your bank: Apple bill $0.99 on Nov 7 \u2014 the size of iCloud storage.",
+      status: "active", history: [{ amount: 0.99, since: "2026-11-15" }] },
+    { id: "seed-microsoft", name: "Microsoft", amount: 8.77, date: "2026-12-08", repeat: "monthly",
+      steps: "",
+      note: "Read from your bank: 'Microsoft*One' $8.77 on Nov 8.",
+      status: "active", history: [{ amount: 8.77, since: "2026-11-15" }] },
+    { id: "seed-aarons", name: "Aaron's", amount: 63.11, date: "2026-11-28", repeat: "biweekly",
+      steps: "",
+      note: "Comes out every payday. Read from your bank: $63.11 on Oct 31.",
+      status: "active", history: [{ amount: 63.11, since: "2026-11-15" }] },
+    { id: "seed-schoolcafe", name: "SchoolCafe", amount: 22.25, date: "2026-11-30", repeat: "monthly",
+      steps: "",
+      note: "Jacob's school lunch account. Read from your bank: $22.25 on Oct 31 \u2014 it may top up when the balance runs low rather than on a fixed date.",
+      status: "active", history: [{ amount: 22.25, since: "2026-11-15" }] }
   ];
 }
 
@@ -238,11 +271,21 @@ function load(){
         var sv = 0;
         try { sv = parseInt(localStorage.getItem(KEY + ".seedsV") || "0", 10) || 0; } catch(e){}
         if (localStorage.getItem(KEY + ".seedsV2")) sv = Math.max(sv, 2);
-        if (sv < 3) {
+        if (sv < 4) {
           seedItems().forEach(function(s){
             if (!arr.some(function(x){ return x.id === s.id; })) arr.push(s);
           });
-          try { localStorage.setItem(KEY + ".seedsV", "3"); save(arr); } catch(e){}
+          /* Round 4 also fixes the four domain prices: the seeds first carried $11.08,
+             but her bank shows $11.81 — correct only copies still holding the wrong seed value. */
+          ["seed-whatdimake-domain", "seed-buddy-domain", "seed-gift-domain", "seed-pet-domain"].forEach(function(id){
+            arr.forEach(function(x){
+              if (x.id === id && Number(x.amount) === 11.08) {
+                x.amount = 11.81;
+                if (Array.isArray(x.history) && x.history.length) x.history[0].amount = 11.81;
+              }
+            });
+          });
+          try { localStorage.setItem(KEY + ".seedsV", "4"); save(arr); } catch(e){}
         }
         return arr;
       }
@@ -250,7 +293,7 @@ function load(){
   } catch(e){}
   var s = seedItems();
   save(s);
-  try { localStorage.setItem(KEY + ".seedsV", "3"); } catch(e){}
+  try { localStorage.setItem(KEY + ".seedsV", "4"); } catch(e){}
   return s;
 }
 function save(items){
@@ -278,6 +321,7 @@ function money(n){ return "$" + Number(n).toFixed(2); }
 function rollForward(dateStr, repeat){
   var d = new Date(dateStr + "T00:00:00");
   if (repeat === "monthly") d.setMonth(d.getMonth() + 1);
+  else if (repeat === "biweekly") d.setDate(d.getDate() + 14);
   else if (repeat === "yearly") d.setFullYear(d.getFullYear() + 1);
   else return dateStr;
   var m = "" + (d.getMonth() + 1), day = "" + d.getDate();
@@ -347,7 +391,7 @@ function itemHtml(i){
   if (i.status === "active"){
     html += '<span class="pill ' + pillCls + '">' + daysWord(n) + "</span>";
     html += '<div class="when">' + prettyDate(i.date) +
-      (i.repeat === "monthly" ? " \u00B7 every month" : (i.repeat === "yearly" ? " \u00B7 every year" : " \u00B7 one time")) + "</div>";
+      (i.repeat === "monthly" ? " \u00B7 every month" : (i.repeat === "biweekly" ? " \u00B7 every 2 weeks" : (i.repeat === "yearly" ? " \u00B7 every year" : " \u00B7 one time"))) + "</div>";
   } else {
     html += '<div class="when">Was due ' + prettyDate(i.date) + "</div>";
   }
