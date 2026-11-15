@@ -265,7 +265,11 @@ function seedItems(){
     { id: "seed-gamepass", name: "Jacob's Xbox Game Pass", amount: 25.23, date: "2026-11-22", repeat: "monthly",
       steps: stepsFor("game pass"),
       note: "Jacob's subscription. Shows on your bank as MICROSOFT*XBOX GAME \u2014 $25.23 on Oct 22.",
-      status: "active", history: [{ amount: 25.23, since: "2026-11-15" }] }
+      status: "active", history: [{ amount: 25.23, since: "2026-11-15" }] },
+    { id: "seed-trials-domain", name: "trialsandsubs.com domain", amount: 11.81, date: "2027-11-15", repeat: "yearly",
+      steps: "",
+      note: "Porkbun, auto-renew on. Trials & Subs lives at this address \u2014 bought Nov 15, 2026.",
+      status: "active", history: [{ amount: 11.81, since: "2026-11-15" }] }
   ];
 }
 
@@ -286,7 +290,7 @@ function load(){
         var sv = 0;
         try { sv = parseInt(localStorage.getItem(KEY + ".seedsV") || "0", 10) || 0; } catch(e){}
         if (localStorage.getItem(KEY + ".seedsV2")) sv = Math.max(sv, 2);
-        if (sv < 9) {
+        if (sv < 10) {
           seedItems().forEach(function(s){
             if (!arr.some(function(x){ return x.id === s.id; })) arr.push(s);
           });
@@ -319,7 +323,7 @@ function load(){
               x.note = "Due on the 12th \u2014 you pay it around the 16th, when you get paid. The payment itself is $392.35; you pay $400 flat, and their fee for paying adds $5.95 \u2014 $405.95 leaves your account. Bank shows $405.95 out on Oct 17.";
             }
           });
-          try { localStorage.setItem(KEY + ".seedsV", "9"); save(arr); } catch(e){}
+          try { localStorage.setItem(KEY + ".seedsV", "10"); save(arr); } catch(e){}
         }
         return arr;
       }
@@ -327,7 +331,7 @@ function load(){
   } catch(e){}
   var s = seedItems();
   save(s);
-  try { localStorage.setItem(KEY + ".seedsV", "9"); } catch(e){}
+  try { localStorage.setItem(KEY + ".seedsV", "10"); } catch(e){}
   return s;
 }
 function save(items){
