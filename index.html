@@ -205,6 +205,18 @@ function seedItems(){
     { id: "seed-whatdimake-domain", name: "whatdimake.com domain", amount: 11.08, date: "2027-10-23", repeat: "yearly",
       steps: "",
       note: "Porkbun, auto-renew on. Your tracker lives at this address.",
+      status: "active", history: [{ amount: 11.08, since: "2026-11-15" }] },
+    { id: "seed-buddy-domain", name: "myinventorybuddy.com domain", amount: 11.08, date: "2027-11-01", repeat: "yearly",
+      steps: "",
+      note: "Porkbun, auto-renew on. Inventory Buddy lives at this address.",
+      status: "active", history: [{ amount: 11.08, since: "2026-11-15" }] },
+    { id: "seed-gift-domain", name: "giftkeepersecret.com domain", amount: 11.08, date: "2027-11-08", repeat: "yearly",
+      steps: "",
+      note: "Porkbun, auto-renew on. Gift Keeper lives at this address.",
+      status: "active", history: [{ amount: 11.08, since: "2026-11-15" }] },
+    { id: "seed-pet-domain", name: "yourpetkeeper.com domain", amount: 11.08, date: "2027-11-08", repeat: "yearly",
+      steps: "",
+      note: "Porkbun, auto-renew on. Pet Keeper lives at this address.",
       status: "active", history: [{ amount: 11.08, since: "2026-11-15" }] }
   ];
 }
@@ -221,13 +233,16 @@ function load(){
             it.history = [{ amount: Number(it.amount) || 0, since: todayStr() }];
           }
         });
-        /* Second seed round (2026-11-15): her standing charges join lists saved by the
-           first version — once only, so anything she later takes off stays off. */
-        if (!localStorage.getItem(KEY + ".seedsV2")) {
+        /* Seed rounds (2026-11-15): new built-in charges join lists saved by older
+           versions — each round lands once only, so anything she takes off stays off. */
+        var sv = 0;
+        try { sv = parseInt(localStorage.getItem(KEY + ".seedsV") || "0", 10) || 0; } catch(e){}
+        if (localStorage.getItem(KEY + ".seedsV2")) sv = Math.max(sv, 2);
+        if (sv < 3) {
           seedItems().forEach(function(s){
             if (!arr.some(function(x){ return x.id === s.id; })) arr.push(s);
           });
-          try { localStorage.setItem(KEY + ".seedsV2", "1"); save(arr); } catch(e){}
+          try { localStorage.setItem(KEY + ".seedsV", "3"); save(arr); } catch(e){}
         }
         return arr;
       }
@@ -235,7 +250,7 @@ function load(){
   } catch(e){}
   var s = seedItems();
   save(s);
-  try { localStorage.setItem(KEY + ".seedsV2", "1"); } catch(e){}
+  try { localStorage.setItem(KEY + ".seedsV", "3"); } catch(e){}
   return s;
 }
 function save(items){
