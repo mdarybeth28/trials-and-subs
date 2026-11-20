@@ -442,6 +442,7 @@ function itemHtml(i){
         " \u2014 it was " + money(firstAmt) + " when you added it.</div>";
     }
   }
+  if (i.lastPaid) html += '<div class="note">\u2713 Paid ' + prettyDate(i.lastPaid) + "</div>";
   if (i.note) html += '<div class="note">' + esc(i.note) + "</div>";
   if (i.steps) html += "<details><summary>How to cancel it</summary><div class=\"steps\">" + esc(i.steps) + "</div></details>";
   if (i.status === "active"){
@@ -451,6 +452,7 @@ function itemHtml(i){
   html += '<div class="actions">';
   if (i.status === "active"){
     html += '<button class="small" data-act="cancelled" data-id="' + i.id + '">I cancelled it</button>';
+    if (i.repeat !== "none") html += '<button class="small plain" data-act="paid" data-id="' + i.id + '">\u2713 I paid it</button>';
     html += '<button class="small plain" data-act="kept" data-id="' + i.id + '">' +
       (i.repeat === "none" ? "I paid it / handled it" : "I'm keeping it") + "</button>";
     html += '<button class="small plain" data-act="edit" data-id="' + i.id + '">Fix it</button>';
@@ -471,6 +473,11 @@ function wireButtons(){
       items.forEach(function(x){ if (x.id === id) it = x; });
       if (!it) return;
       if (act === "cancelled"){ it.status = "cancelled"; }
+      else if (act === "paid"){
+        it.lastPaid = todayStr();
+        it.date = rollForward(it.date, it.repeat);
+        while (daysUntil(it.date) < 0) it.date = rollForward(it.date, it.repeat);
+      }
       else if (act === "kept"){
         if (it.repeat === "none"){ it.status = "handled"; }
         else {
