@@ -455,6 +455,7 @@ function itemHtml(i){
     if (i.repeat !== "none") html += '<button class="small plain" data-act="paid" data-id="' + i.id + '">\u2713 I paid it</button>';
     html += '<button class="small plain" data-act="kept" data-id="' + i.id + '">' +
       (i.repeat === "none" ? "I paid it / handled it" : "I'm keeping it") + "</button>";
+    html += '<button class="small plain" data-act="postpone" data-id="' + i.id + '">\uD83D\uDCC5 Put it off to a date</button>';
     html += '<button class="small plain" data-act="edit" data-id="' + i.id + '">Fix it</button>';
     html += '<button class="small danger" data-act="del" data-id="' + i.id + '">Take it off</button>';
   } else {
@@ -490,6 +491,20 @@ function wireButtons(){
         if (window.confirm("Take " + it.name + " off the list for good?")) {
           items = items.filter(function(x){ return x.id !== id; });
         } else return;
+      }
+      else if (act === "postpone"){
+        var box = b.closest(".actions");
+        if (!box) return;
+        box.innerHTML = '<input type="date" id="pp-date" value="' + it.date + '"> <button class="small" id="pp-save">Move it to that date</button> <button class="small plain" id="pp-cancel">Never mind</button>';
+        document.getElementById("pp-cancel").addEventListener("click", function(){ render(); });
+        document.getElementById("pp-save").addEventListener("click", function(){
+          var v = document.getElementById("pp-date").value;
+          if (!v) return;
+          it.date = v;
+          save(items);
+          render();
+        });
+        return;
       }
       else if (act === "edit"){ openForm(it); return; }
       save(items);
