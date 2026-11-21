@@ -107,7 +107,7 @@
     <label for="fSteps">How do I cancel it? (the taps)</label>
     <textarea id="fSteps" placeholder="The steps to cancel, so future-you doesn't have to hunt for them. Start typing a known name above and I'll fill this in when I know it."></textarea>
     <label for="fNote">Anything to remember? (optional)</label>
-    <input id="fNote" type="text" placeholder="Like: only cancel after my EIN lands" autocomplete="off">
+    <input id="fNote" type="text" placeholder="Like: only cancel after the trial ends" autocomplete="off">
     <div class="rowbtns">
       <button type="submit" id="saveBtn">Save it</button>
       <button type="button" class="plain" id="cancelBtn">Never mind</button>
@@ -183,93 +183,26 @@ function linkFor(name){
   return null;
 }
 
-/* ---- Seed: Mary's own three, loaded the first time the page opens ---- */
+/* ---- Starter samples: plain made-up items so a first-time visitor can see
+   how a card looks. NOT anyone's real list — swap in your own. ---- */
 function seedItems(){
   return [
-    { id: "seed-vibely", name: "Vibely Lite", amount: 10.00, date: "2026-12-01", repeat: "none",
+    { id: "sample-trial", name: "Photo Editor \u2014 free trial (sample)", amount: 8.99, date: "2026-11-24", repeat: "monthly",
       steps: "",
-      note: "It holds the old Gift Keeper site \u2014 retire it last, when you're ready. Your call.",
-      status: "active", history: [{ amount: 10.00, since: "2026-11-15" }] },
-    { id: "seed-faxburner", name: "FaxBurner Professional", amount: 14.95, date: "2026-12-10", repeat: "monthly",
-      steps: stepsFor("FaxBurner"),
-      note: "Charges about the 10th. Cancel this ONLY after your EIN lands \u2014 you still need the fax number till then.",
-      status: "active", history: [{ amount: 14.95, since: "2026-11-15" }] },
-    { id: "seed-pattern", name: "Etsy Pattern", amount: 15.00, date: "2026-12-16", repeat: "monthly",
-      steps: stepsFor("Etsy Pattern"),
-      note: "Free until Dec 15 \u2014 the first $15 charge lands Dec 16.",
-      status: "active", history: [{ amount: 15.00, since: "2026-11-15" }] },
-    { id: "seed-band", name: "Jacob's Band Payment (AMRO Music)", amount: 49.94, date: "2026-12-09", repeat: "monthly",
+      note: "Sample. This pretend trial is free until the date above \u2014 after that it would charge $8.99 a month. That is exactly the surprise this list is here to catch.",
+      status: "active", history: [{ amount: 8.99, since: "2026-11-20" }] },
+    { id: "sample-streaming", name: "Movie Streaming (sample)", amount: 12.99, date: "2026-12-03", repeat: "monthly",
       steps: "",
-      note: "On autopay. Shows on your bank as AMRO MUSIC \u2014 $49.94 on Oct 9.",
-      status: "active", history: [{ amount: 49.94, since: "2026-11-15" }] },
-    { id: "seed-appledev", name: "Apple Developer Program", amount: 99.00, date: "2027-11-10", repeat: "yearly",
+      note: "Sample item \u2014 a pretend streaming bill so you can see how a card looks. Tap Fix it to turn it into a real one of yours, or Take it off and add your own.",
+      status: "active", history: [{ amount: 12.99, since: "2026-11-20" }] },
+    { id: "sample-music", name: "Music App (sample)", amount: 10.99, date: "2026-12-10", repeat: "monthly",
       steps: "",
-      note: "Your Apple developer membership \u2014 all four apps live under it.",
-      status: "active", history: [{ amount: 99.00, since: "2026-11-15" }] },
-    { id: "seed-whatdimake-domain", name: "whatdimake.com domain", amount: 11.81, date: "2027-10-23", repeat: "yearly",
+      note: "Sample item. Your real list is yours alone \u2014 it is saved on this device, not on any server.",
+      status: "active", history: [{ amount: 10.99, since: "2026-11-20" }] },
+    { id: "sample-gym", name: "Gym Membership (sample)", amount: 29.00, date: "2027-01-01", repeat: "monthly",
       steps: "",
-      note: "Porkbun, auto-renew on. Your tracker lives at this address.",
-      status: "active", history: [{ amount: 11.81, since: "2026-11-15" }] },
-    { id: "seed-buddy-domain", name: "myinventorybuddy.com domain", amount: 11.81, date: "2027-11-01", repeat: "yearly",
-      steps: "",
-      note: "Porkbun, auto-renew on. Inventory Buddy lives at this address.",
-      status: "active", history: [{ amount: 11.81, since: "2026-11-15" }] },
-    { id: "seed-gift-domain", name: "giftkeepersecret.com domain", amount: 11.81, date: "2027-11-08", repeat: "yearly",
-      steps: "",
-      note: "Porkbun, auto-renew on. Gift Keeper lives at this address.",
-      status: "active", history: [{ amount: 11.81, since: "2026-11-15" }] },
-    { id: "seed-pet-domain", name: "yourpetkeeper.com domain", amount: 11.81, date: "2027-11-08", repeat: "yearly",
-      steps: "",
-      note: "Porkbun, auto-renew on. Pet Keeper lives at this address.",
-      status: "active", history: [{ amount: 11.81, since: "2026-11-15" }] },
-    { id: "seed-verizon", name: "Verizon", amount: 168.74, date: "2026-11-30", repeat: "monthly",
-      steps: "",
-      note: "Phone bill. Read from your bank: $168.74 on Oct 30.",
-      status: "active", history: [{ amount: 168.74, since: "2026-11-15" }] },
-    { id: "seed-onstar", name: "OnStar", amount: 54.13, date: "2026-12-02", repeat: "monthly",
-      steps: "",
-      note: "Read from your bank: $54.13 on Nov 2.",
-      status: "active", history: [{ amount: 54.13, since: "2026-11-15" }] },
-    { id: "seed-prime", name: "Amazon Prime", amount: 7.65, date: "2026-12-04", repeat: "monthly",
-      steps: stepsFor("Amazon Prime"),
-      note: "Read from your bank: $7.65 on Nov 4 \u2014 less than full Prime, so it may be a channel or a discounted plan.",
-      status: "active", history: [{ amount: 7.65, since: "2026-11-15" }] },
-    { id: "seed-siriusxm", name: "SiriusXM", amount: 3.28, date: "2026-12-07", repeat: "monthly",
-      steps: "",
-      note: "Read from your bank: $3.28 on Nov 7.",
-      status: "active", history: [{ amount: 3.28, since: "2026-11-15" }] },
-    { id: "seed-apple", name: "Apple (iCloud)", amount: 0.99, date: "2026-12-07", repeat: "monthly",
-      steps: stepsFor("iCloud"),
-      note: "Read from your bank: Apple bill $0.99 on Nov 7 \u2014 the size of iCloud storage.",
-      status: "active", history: [{ amount: 0.99, since: "2026-11-15" }] },
-    { id: "seed-microsoft", name: "Microsoft", amount: 8.77, date: "2026-12-08", repeat: "monthly",
-      steps: "",
-      note: "Read from your bank: 'Microsoft*One' $8.77 on Nov 8.",
-      status: "active", history: [{ amount: 8.77, since: "2026-11-15" }] },
-    { id: "seed-aarons", name: "Aaron's", amount: 63.11, date: "2026-11-28", repeat: "biweekly",
-      steps: "",
-      note: "Comes out every payday. Read from your bank: $63.11 on Oct 31.",
-      status: "active", history: [{ amount: 63.11, since: "2026-11-15" }] },
-    { id: "seed-schoolcafe", name: "SchoolCafe", amount: 22.25, date: "2026-11-30", repeat: "monthly",
-      steps: "",
-      note: "Jacob's school lunch account. Read from your bank: $22.25 on Oct 31 \u2014 it may top up when the balance runs low rather than on a fixed date.",
-      status: "active", history: [{ amount: 22.25, since: "2026-11-15" }] },
-    { id: "seed-walmartplus", name: "Walmart+", amount: 49.00, date: "2027-01-16", repeat: "yearly",
-      steps: "In the Walmart app: Account \u2192 Walmart+ \u2192 Manage (under Your Membership) \u2192 cancel.",
-      note: "Walmart+ Assist Annual, $49 plus tax. Read from your Walmart app Nov 15 \u2014 renews Jan 16, 2027.",
-      status: "active", history: [{ amount: 49.00, since: "2026-11-15" }] },
-    { id: "seed-carpayment", name: "Car payment (American Credit)", amount: 405.95, date: "2026-11-16", repeat: "monthly",
-      steps: "",
-      note: "Due on the 12th \u2014 you pay it around the 16th, when you get paid. The payment itself is $392.35; you pay $400 flat, and their fee for paying adds $5.95 \u2014 $405.95 leaves your account. Bank shows $405.95 out on Oct 17.",
-      status: "active", history: [{ amount: 405.95, since: "2026-11-15" }] },
-    { id: "seed-gamepass", name: "Jacob's Xbox Game Pass", amount: 25.23, date: "2026-11-22", repeat: "monthly",
-      steps: stepsFor("game pass"),
-      note: "Jacob's subscription. Shows on your bank as MICROSOFT*XBOX GAME \u2014 $25.23 on Oct 22.",
-      status: "active", history: [{ amount: 25.23, since: "2026-11-15" }] },
-    { id: "seed-trials-domain", name: "trialsandsubs.com domain", amount: 11.81, date: "2027-11-15", repeat: "yearly",
-      steps: "",
-      note: "Porkbun, auto-renew on. Trials & Subs lives at this address \u2014 bought Nov 15, 2026.",
-      status: "active", history: [{ amount: 11.81, since: "2026-11-15" }] }
+      note: "Sample item. Add everything you pay for \u2014 trials, apps, bills \u2014 and this list will warn you before each one charges.",
+      status: "active", history: [{ amount: 29.00, since: "2026-11-20" }] }
   ];
 }
 
@@ -293,35 +226,6 @@ function load(){
         if (sv < 10) {
           seedItems().forEach(function(s){
             if (!arr.some(function(x){ return x.id === s.id; })) arr.push(s);
-          });
-          /* Round 4 also fixes the four domain prices: the seeds first carried $11.08,
-             but her bank shows $11.81 — correct only copies still holding the wrong seed value. */
-          ["seed-whatdimake-domain", "seed-buddy-domain", "seed-gift-domain", "seed-pet-domain"].forEach(function(id){
-            arr.forEach(function(x){
-              if (x.id === id && Number(x.amount) === 11.08) {
-                x.amount = 11.81;
-                if (Array.isArray(x.history) && x.history.length) x.history[0].amount = 11.81;
-              }
-            });
-          });
-          /* Round 7 fixes the band payment: the seed guessed $50 on Dec 8 from a calendar
-             note, but her bank shows AMRO MUSIC $49.94 on Oct 9 — correct only a copy
-             still holding the exact guessed values. */
-          arr.forEach(function(x){
-            if (x.id === "seed-band" && Number(x.amount) === 50 && x.date === "2026-12-08") {
-              x.name = "Jacob's Band Payment (AMRO Music)";
-              x.amount = 49.94;
-              x.date = "2026-12-09";
-              x.note = "On autopay. Shows on your bank as AMRO MUSIC \u2014 $49.94 on Oct 9.";
-              if (Array.isArray(x.history) && x.history.length) x.history[0].amount = 49.94;
-            }
-          });
-          /* Round 8/9 puts the exact car math in the note (Mary, corrected twice):
-             payment $392.35, she pays $400 flat, their pay fee adds $5.95 — $405.95 out. */
-          arr.forEach(function(x){
-            if (x.id === "seed-carpayment" && x.note && (x.note.indexOf("about $396") !== -1 || x.note.indexOf("$13.60") !== -1)) {
-              x.note = "Due on the 12th \u2014 you pay it around the 16th, when you get paid. The payment itself is $392.35; you pay $400 flat, and their fee for paying adds $5.95 \u2014 $405.95 leaves your account. Bank shows $405.95 out on Oct 17.";
-            }
           });
           try { localStorage.setItem(KEY + ".seedsV", "10"); save(arr); } catch(e){}
         }
