@@ -76,6 +76,15 @@
   .empty{background:var(--card);border:1px dashed var(--line);border-radius:14px;
          padding:20px;text-align:center;color:var(--grey);}
   footer{color:var(--grey);font-size:15px;text-align:center;padding:0 18px 30px;}
+
+  #acct{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:14px 16px;margin-bottom:18px;}
+  #acct .acctbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  #acct .accttxt{flex:1;min-width:200px;}
+  #acct .acctbtns{display:flex;gap:10px;flex-wrap:wrap;}
+  #acct form{border:none;border-radius:0;padding:0;margin:14px 0 0;background:transparent;}
+  .acctnote{color:var(--grey);font-size:16px;margin:10px 0 0;}
+  .acctnote:empty{display:none;}
 </style>
 </head>
 <body>
@@ -85,6 +94,34 @@
   <p>Never get charged by surprise.</p>
 </header>
 <main>
+  <div id="acct" hidden>
+    <div class="acctbar">
+      <div class="accttxt" id="acctText">Want your list on your phone <b>and</b> your computer? A free account makes it follow you.</div>
+      <div class="acctbtns" id="acctBtns">
+        <button class="small" id="acctShowSignIn">Sign in</button>
+        <button class="small plain" id="acctShowSignUp">Create account</button>
+      </div>
+      <div class="acctbtns" id="acctOutBtns" hidden>
+        <button class="small plain" id="acctSignOut">Sign out</button>
+      </div>
+    </div>
+    <form id="acctForm" hidden>
+      <label for="aEmail">Email</label>
+      <input id="aEmail" type="email" autocomplete="email" placeholder="you@example.com">
+      <label for="aPass">Password</label>
+      <input id="aPass" type="password" autocomplete="current-password" placeholder="Your password">
+      <div class="rowbtns">
+        <button type="button" id="aDoSignIn">Sign in</button>
+        <button type="button" class="plain" id="aDoSignUp">Create my account</button>
+      </div>
+      <div class="rowbtns">
+        <button type="button" class="plain" id="aCancel">Never mind</button>
+      </div>
+      <p class="hint" id="aMsg"></p>
+    </form>
+    <p class="acctnote" id="acctNote"></p>
+  </div>
+
   <div class="nextup" id="nextUp"></div>
 
   <button id="addBtn">＋ Add a trial or subscription</button>
@@ -120,9 +157,24 @@
 </main>
 <footer>Trials &amp; Subs — a little list that watches your dates, so a surprise charge never does.<br><br>💌 <a href="https://mary-beth-s-finds.kit.com/joinfree?from=trialsandsubs">Join my email list</a> — Mary Beth's Finds: new finds, printables, and app news, straight to your inbox. No spam, just the good stuff.</footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 "use strict";
 var KEY = "beforeItCharges.v1";
+
+/* ================= ACCOUNT CONFIG =================
+   Supabase project "Trials and Subs" — this is where account lists live.
+   SUPABASE_ANON_KEY below is the project's publishable (anon) key; it is
+   safe to ship in the page because the watchlists table is locked down by
+   row-level security (each signed-in user can touch only their own row).
+   >>> STILL NEEDED: paste the real Project URL between the quotes on the
+   >>> SUPABASE_URL line (Supabase dashboard -> Project Settings -> API ->
+   >>> "Project URL"). While it says __SUPABASE_URL__ the site simply runs
+   local-only, exactly as before — sync is an enhancement, never a new way
+   for the page to break. */
+var SUPABASE_URL = "https://adzsednmhwqpqxdzdpra.supabase.co";
+var SUPABASE_ANON_KEY = "sb_publishable_Hk04D9MCowX2tk_9cmklzw_dxiOACEr";
+/* =============== END ACCOUNT CONFIG =============== */
 
 /* ---- Cancel-steps library: the taps, spelled out, for services people ask about most ---- */
 var CANCEL_LIBRARY = [
@@ -240,6 +292,284 @@ function load(){
 }
 function save(items){
   try { localStorage.setItem(KEY, JSON.stringify(items)); } catch(e){}
+  pushToAccount();
+}
+
+/* ================= Accounts & cloud sync =================
+   Rules (from the safe-cloud-sync skill — they govern this build):
+   - Account data is the items array ONLY. Nothing device-only exists in
+     this app, and nothing device-only is added here.
+   - One account row per user (public.watchlists), readable/writable only
+     by that user (row-level security in accounts-setup.sql).
+   - An empty list is NO INFORMATION, never a newer truth: an empty array
+     is never written over a non-empty account list — guarded here in the
+     page AND by a trigger in the database.
+   - Every add / edit / delete / paid / postpone / cancel / keep / restore
+     saves to the account at once (save() calls pushToAccount()).
+   - On sign-in the account copy and this device's copy merge BY ITEM ID.
+     Same name, different id: BOTH are kept — neither side is ever
+     silently dropped.
+   - The 4 starter samples are pretend. An untouched sample is never
+     written into an account and never joins the signed-in view.
+   - Before the first cloud write on a device, the pre-merge local list
+     is stashed under beforeItCharges.backup.<timestamp> (most recent
+     one kept) so there is always a way back.
+   - Signed out, or if the library/config/network is missing, the page
+     behaves exactly as the local-only version always has. */
+
+var sb = null;                  /* Supabase client; null = local-only mode */
+var authUser = null;            /* signed-in user (drives the account bar) */
+var syncUser = null;            /* user whose row pushToAccount writes */
+var syncReady = false;          /* true once this session's sign-in merge finished */
+var lastKnownAccountCount = 0;  /* items in the account row, as last seen/written */
+var mergeDoneFor = null;        /* user id the sign-in merge already ran for */
+try {
+  if (SUPABASE_URL.indexOf("http") === 0 && window.supabase && window.supabase.createClient) {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+} catch(e){ sb = null; }
+
+/* === SYNC LOGIC (pure — tested in Node, see LOGIC-TESTS.md) === */
+function syncSampleSeed(id){
+  var seeds = seedItems();
+  for (var i = 0; i < seeds.length; i++) if (seeds[i].id === id) return seeds[i];
+  return null;
+}
+/* A sample counts as "untouched" only while every field still matches the
+   seed exactly. The moment someone edits one (the sample note itself says
+   "Tap Fix it to turn it into a real one of yours") it is their real data
+   and syncs like anything else. */
+function isUntouchedSample(it){
+  if (!it || !it.id) return false;
+  var s = syncSampleSeed(it.id);
+  if (!s) return false;
+  return it.name === s.name && Number(it.amount) === Number(s.amount) &&
+    it.date === s.date && it.repeat === s.repeat && it.status === s.status &&
+    (it.note || "") === (s.note || "") && (it.steps || "") === (s.steps || "");
+}
+function realItems(list){
+  if (!Array.isArray(list)) return [];
+  return list.filter(function(it){ return !isUntouchedSample(it); });
+}
+/* Union by item id. The account copy is the starting truth (its version of
+   a shared id wins); local-only ids are appended. Untouched samples never
+   join. Returns the merged list for the screen, plus the exact payload
+   that may be written to the account (samples stripped again, belt and
+   braces). */
+function mergeLists(accountItems, localItems){
+  var account = Array.isArray(accountItems) ? accountItems : [];
+  var localReal = realItems(localItems);
+  var seen = {}, merged = [];
+  account.forEach(function(it){
+    if (it && it.id && !seen[it.id]) { seen[it.id] = 1; merged.push(it); }
+  });
+  localReal.forEach(function(it){
+    if (it && it.id && !seen[it.id]) { seen[it.id] = 1; merged.push(it); }
+  });
+  return { merged: merged, forAccount: realItems(merged) };
+}
+/* The empty guard: an empty write is allowed only when the account is
+   known to be empty too. Mirrors the database trigger. */
+function canWriteToAccount(nextCount, knownAccountCount){
+  return !(nextCount === 0 && knownAccountCount > 0);
+}
+/* === END SYNC LOGIC === */
+
+/* Keep the pre-merge local list as a last-good copy before any cloud
+   write touches this device's data. Only the most recent backup is kept. */
+function stashBackup(list){
+  try {
+    var keep = KEY + ".backup." + new Date().toISOString().replace(/[:.]/g, "-");
+    localStorage.setItem(keep, JSON.stringify(list));
+    var drop = [];
+    for (var i = 0; i < localStorage.length; i++){
+      var k = localStorage.key(i);
+      if (k && k.indexOf(KEY + ".backup.") === 0 && k !== keep) drop.push(k);
+    }
+    drop.forEach(function(k){ try { localStorage.removeItem(k); } catch(e){} });
+  } catch(e){}
+}
+
+/* One upsert of the whole (real) list, right after the local save.
+   No-ops unless signed in AND this session's merge has finished — an
+   unmerged device list must never overwrite the account. */
+function pushToAccount(){
+  if (!sb || !syncUser || !syncReady) return;
+  var real = realItems(items);
+  if (!canWriteToAccount(real.length, lastKnownAccountCount)) return;
+  try {
+    sb.from("watchlists").upsert(
+      { user_id: syncUser.id, items: real, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    ).then(function(res){
+      if (!res.error) lastKnownAccountCount = real.length;
+    });
+  } catch(e){}
+}
+
+/* Sign-in: fetch the account row, stash a backup, merge by id, then let
+   the merged list save locally and to the account. If the row can't be
+   read (offline, table missing), stay local-only for this session —
+   nothing is written and nothing is lost. */
+function beginSync(user){
+  if (!sb || !user) return;
+  if (mergeDoneFor === user.id) { updateAccountUI(); return; }
+  mergeDoneFor = user.id;
+  syncUser = user;
+  updateAccountUI();
+  setAcctNote("Getting your account list\u2026");
+  sb.from("watchlists").select("items").eq("user_id", user.id).maybeSingle()
+    .then(function(res){
+      if (res.error) {
+        syncReady = false;
+        setAcctNote("Signed in, but I couldn\u2019t reach your account list just now \u2014 you\u2019re seeing this device\u2019s list, and changes save on this device only. Nothing is lost.");
+        return;
+      }
+      var accountItems = (res.data && Array.isArray(res.data.items)) ? res.data.items : [];
+      lastKnownAccountCount = accountItems.length;
+      stashBackup(items);
+      var m = mergeLists(accountItems, items);
+      items = m.merged;
+      syncReady = true;
+      save(items);
+      render();
+      setAcctNote("Your list is saved to your account \u2014 it will be the same on your other devices.");
+      updateAccountUI();
+    });
+}
+
+/* Sign-out: this device goes back to the list it holds locally.
+   Nothing is deleted — not here, not in the account. */
+function endSync(){
+  syncUser = null;
+  syncReady = false;
+  mergeDoneFor = null;
+  lastKnownAccountCount = 0;
+  items = load();
+  render();
+  updateAccountUI();
+  setAcctNote("Signed out \u2014 this device is back to its own list. Your account list is saved and waiting for you.");
+}
+
+function plainAuthError(err){
+  var m = (err && err.message) || "";
+  if (/invalid login credentials/i.test(m)) return "That email and password don\u2019t match. Check them and try again.";
+  if (/already registered|already been registered|already exists/i.test(m)) return "That email already has an account \u2014 tap Sign in instead.";
+  if (/password should be at least/i.test(m)) return "That password is too short \u2014 use at least 6 characters.";
+  if (/unable to validate email|invalid format|invalid email/i.test(m)) return "That email address doesn\u2019t look right \u2014 check it and try again.";
+  if (/email not confirmed/i.test(m)) return "Your email isn\u2019t confirmed yet \u2014 tap the link in the email we sent you, then sign in.";
+  return "Something went wrong. Check your connection and try again.";
+}
+
+function setAcctMsg(t){
+  var el = document.getElementById("aMsg");
+  if (el) el.textContent = t || "";
+}
+function setAcctNote(t){
+  var el = document.getElementById("acctNote");
+  if (el) el.textContent = t || "";
+}
+function updateAccountUI(){
+  var box = document.getElementById("acct");
+  if (!box) return;
+  if (!sb) { box.hidden = true; return; }
+  box.hidden = false;
+  var txt = document.getElementById("acctText");
+  var inBtns = document.getElementById("acctBtns");
+  var outBtns = document.getElementById("acctOutBtns");
+  var formEl = document.getElementById("acctForm");
+  if (authUser) {
+    txt.innerHTML = "Signed in as <b>" + esc(authUser.email || "") + "</b> \u2014 your list is saved to your account and follows you.";
+    inBtns.hidden = true;
+    outBtns.hidden = false;
+    formEl.hidden = true;
+  } else {
+    txt.innerHTML = "Want your list on your phone <b>and</b> your computer? A free account makes it follow you.";
+    inBtns.hidden = false;
+    outBtns.hidden = true;
+  }
+}
+function showAcctForm(mode){
+  var formEl = document.getElementById("acctForm");
+  formEl.hidden = false;
+  setAcctMsg(mode === "up"
+    ? "Pick an email and a password (at least 6 characters). We\u2019ll email you a link to confirm it\u2019s really you."
+    : "Welcome back \u2014 sign in and your account list appears.");
+  var em = document.getElementById("aEmail");
+  if (em) em.focus();
+}
+function acctFields(){
+  return {
+    email: document.getElementById("aEmail").value.trim(),
+    pass: document.getElementById("aPass").value
+  };
+}
+function doSignIn(){
+  if (!sb) return;
+  var f = acctFields();
+  if (!f.email || !f.pass) { setAcctMsg("Type your email and your password first."); return; }
+  setAcctMsg("Signing you in\u2026");
+  sb.auth.signInWithPassword({ email: f.email, password: f.pass }).then(function(res){
+    if (res.error) { setAcctMsg(plainAuthError(res.error)); return; }
+    setAcctMsg("");
+    document.getElementById("acctForm").hidden = true;
+    /* onAuthStateChange fires SIGNED_IN and beginSync takes it from here. */
+  });
+}
+function doSignUp(){
+  if (!sb) return;
+  var f = acctFields();
+  if (!f.email || !f.pass) { setAcctMsg("Type an email and pick a password first."); return; }
+  if (f.pass.length < 6) { setAcctMsg("That password is too short \u2014 use at least 6 characters."); return; }
+  setAcctMsg("Making your account\u2026");
+  sb.auth.signUp({
+    email: f.email, password: f.pass,
+    options: { emailRedirectTo: window.location.href.split("#")[0] }
+  }).then(function(res){
+    if (res.error) { setAcctMsg(plainAuthError(res.error)); return; }
+    if (res.data && res.data.session) {
+      setAcctMsg("");
+      document.getElementById("acctForm").hidden = true;
+    } else {
+      setAcctMsg("Almost done! Check your email to confirm, then come back and sign in.");
+    }
+  });
+}
+
+/* Wire the account area and pick up any existing session. Runs once,
+   after the first render. If there is no client (CDN/config/network),
+   the account area stays hidden and the page is the local-only version. */
+function initAccounts(){
+  var box = document.getElementById("acct");
+  if (!sb) { if (box) box.hidden = true; return; }
+  updateAccountUI();
+  document.getElementById("acctShowSignIn").addEventListener("click", function(){ showAcctForm("in"); });
+  document.getElementById("acctShowSignUp").addEventListener("click", function(){ showAcctForm("up"); });
+  document.getElementById("aCancel").addEventListener("click", function(){
+    document.getElementById("acctForm").hidden = true;
+    setAcctMsg("");
+  });
+  document.getElementById("aDoSignIn").addEventListener("click", doSignIn);
+  document.getElementById("aDoSignUp").addEventListener("click", doSignUp);
+  document.getElementById("acctForm").addEventListener("submit", function(ev){
+    ev.preventDefault();
+    doSignIn();
+  });
+  document.getElementById("acctSignOut").addEventListener("click", function(){
+    try { sb.auth.signOut(); } catch(e){}
+  });
+  sb.auth.getSession().then(function(res){
+    var session = (res && res.data) ? res.data.session : null;
+    authUser = session ? session.user : null;
+    updateAccountUI();
+    if (authUser) beginSync(authUser);
+  });
+  sb.auth.onAuthStateChange(function(event, session){
+    authUser = session ? session.user : null;
+    if (event === "SIGNED_IN" && authUser) { updateAccountUI(); beginSync(authUser); }
+    else if (event === "SIGNED_OUT") { endSync(); }
+    else { updateAccountUI(); }
+  });
 }
 
 /* ---- Date helpers (plain calendar math, in her timezone as the phone reports it) ---- */
@@ -488,6 +818,7 @@ form.addEventListener("submit", function(ev){
 });
 
 render();
+initAccounts();
 </script>
 </body>
 </html>
