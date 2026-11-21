@@ -310,6 +310,14 @@ function save(items){
    - On sign-in the account copy and this device's copy merge BY ITEM ID.
      Same name, different id: BOTH are kept — neither side is ever
      silently dropped.
+   - Deletes travel too, by a 3-way merge: each device remembers the
+     account state it last synced (KEY + ".syncBase." + userId). On
+     later sign-ins, an item that is in that base but gone from the
+     account was deleted on another device, so it drops out here as
+     well; an item in neither was added on this device and is kept.
+     A push the account does not accept marks the device dirty
+     (KEY + ".syncDirty"); a dirty device merges local-first at the
+     next sign-in and pushes again, so its changes are not lost.
    - The 4 starter samples are pretend. An untouched sample is never
      written into an account and never joins the signed-in view.
    - Before the first cloud write on a device, the pre-merge local list
@@ -374,6 +382,56 @@ function mergeLists(accountItems, localItems){
 function canWriteToAccount(nextCount, knownAccountCount){
   return !(nextCount === 0 && knownAccountCount > 0);
 }
+function itemIds(list){
+  if (!Array.isArray(list)) return [];
+  var out = [];
+  list.forEach(function(it){ if (it && it.id) out.push(it.id); });
+  return out;
+}
+function idSetFrom(list){
+  var s = {};
+  itemIds(list).forEach(function(id){ s[id] = 1; });
+  return s;
+}
+/* The 3-way merge used on every sign-in AFTER a device's first sync for
+   a user. baseIds = the account state this device last successfully
+   read or wrote (stored per device, per user).
+   - Clean (dirty = false): the account is the starting truth, and its
+     version of a shared id wins. A local item that IS in the base but
+     is missing from the account was DELETED on another device, so it
+     drops out here too — that is how deletes travel. A local item in
+     neither the base nor the account was added on this device since
+     the last sync (say, while signed out) and is kept. If the account
+     comes back empty while this device holds real items, the empty
+     account is treated as no information: the local list is kept and
+     pushed back, never wiped.
+   - Dirty (dirty = true): a push from this device failed earlier, so
+     this device may be ahead of the account. Union again, but the
+     LOCAL copy of a shared id wins; the caller pushes the result and
+     clears the flag on success. */
+function mergeThreeWay(accountItems, localItems, baseIds, dirty){
+  var account = Array.isArray(accountItems) ? accountItems : [];
+  var localReal = realItems(localItems);
+  var merged = [], seen = {};
+  function push(it){ if (it && it.id && !seen[it.id]) { seen[it.id] = 1; merged.push(it); } }
+  if (dirty) {
+    localReal.forEach(push);
+    account.forEach(push);
+    return { merged: merged, forAccount: realItems(merged) };
+  }
+  if (account.length === 0 && localReal.length > 0) {
+    localReal.forEach(push);
+    return { merged: merged, forAccount: realItems(merged) };
+  }
+  var base = {};
+  (Array.isArray(baseIds) ? baseIds : []).forEach(function(id){ base[id] = 1; });
+  var inAccount = idSetFrom(account);
+  account.forEach(push);
+  localReal.forEach(function(it){
+    if (it && it.id && !base[it.id] && !inAccount[it.id]) push(it);
+  });
+  return { merged: merged, forAccount: realItems(merged) };
+}
 /* === END SYNC LOGIC === */
 
 /* Keep the pre-merge local list as a last-good copy before any cloud
@@ -391,9 +449,41 @@ function stashBackup(list){
   } catch(e){}
 }
 
+/* Per-device sync bookkeeping — never written to the account row, which
+   stays { user_id, items, updated_at }:
+   - KEY + ".syncBase." + userId: the ids of the account state this
+     device last successfully read or wrote for that user. Absent means
+     this device has never finished a sync for that user, so the next
+     sign-in is a first-sync adoption (plain union, as before).
+   - KEY + ".syncDirty": "1" when a push was not accepted by the
+     account, meaning this device holds changes the account has not
+     seen; cleared on any successful push or fetch-merge write. */
+function readSyncBase(userId){
+  try {
+    var raw = localStorage.getItem(KEY + ".syncBase." + userId);
+    if (raw === null) return null;
+    var arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : null;
+  } catch(e){ return null; }
+}
+function writeSyncBase(userId, ids){
+  try { localStorage.setItem(KEY + ".syncBase." + userId, JSON.stringify(ids || [])); } catch(e){}
+}
+function isSyncDirty(){
+  try { return localStorage.getItem(KEY + ".syncDirty") === "1"; } catch(e){ return false; }
+}
+function setSyncDirty(){
+  try { localStorage.setItem(KEY + ".syncDirty", "1"); } catch(e){}
+}
+function clearSyncDirty(){
+  try { localStorage.removeItem(KEY + ".syncDirty"); } catch(e){}
+}
+
 /* One upsert of the whole (real) list, right after the local save.
    No-ops unless signed in AND this session's merge has finished — an
-   unmerged device list must never overwrite the account. */
+   unmerged device list must never overwrite the account. A successful
+   push records the written ids as this device's sync base and clears
+   the dirty flag; a refused push sets the dirty flag instead. */
 function pushToAccount(){
   if (!sb || !syncUser || !syncReady) return;
   var real = realItems(items);
@@ -403,15 +493,21 @@ function pushToAccount(){
       { user_id: syncUser.id, items: real, updated_at: new Date().toISOString() },
       { onConflict: "user_id" }
     ).then(function(res){
-      if (!res.error) lastKnownAccountCount = real.length;
+      if (res.error) { setSyncDirty(); return; }
+      lastKnownAccountCount = real.length;
+      clearSyncDirty();
+      writeSyncBase(syncUser.id, itemIds(real));
     });
-  } catch(e){}
+  } catch(e){ setSyncDirty(); }
 }
 
-/* Sign-in: fetch the account row, stash a backup, merge by id, then let
-   the merged list save locally and to the account. If the row can't be
-   read (offline, table missing), stay local-only for this session —
-   nothing is written and nothing is lost. */
+/* Sign-in: fetch the account row, stash a backup, merge, then let the
+   merged list save locally and to the account. The first sync for a
+   user on this device adopts by plain union (mergeLists); every later
+   sync runs the 3-way merge against the stored base (mergeThreeWay),
+   so deletes made on other devices stay deleted here. If the row
+   can't be read (offline, table missing), stay local-only for this
+   session — nothing is written and nothing is lost. */
 function beginSync(user){
   if (!sb || !user) return;
   if (mergeDoneFor === user.id) { updateAccountUI(); return; }
@@ -429,10 +525,28 @@ function beginSync(user){
       var accountItems = (res.data && Array.isArray(res.data.items)) ? res.data.items : [];
       lastKnownAccountCount = accountItems.length;
       stashBackup(items);
-      var m = mergeLists(accountItems, items);
+      var base = readSyncBase(user.id);
+      var dirty = isSyncDirty();
+      var m;
+      if (base === null) {
+        /* First sync for this user on this device: adopt by plain
+           union, exactly as before. */
+        m = mergeLists(accountItems, items);
+      } else {
+        /* Later syncs: 3-way merge against the base, so a delete made
+           on another device stays deleted here (and a delete made here
+           reaches the account through save -> pushToAccount). */
+        m = mergeThreeWay(accountItems, items, base, dirty);
+      }
       items = m.merged;
       syncReady = true;
       save(items);
+      /* save() just pushed the merged list; on a clean or adoption
+         merge the resulting account state is known, so record it as
+         the new base. (On a dirty merge, pushToAccount records the
+         base itself when the push lands; if it fails, the dirty flag
+         stays set and the next sign-in merges local-first again.) */
+      if (!dirty) writeSyncBase(user.id, itemIds(m.forAccount));
       render();
       setAcctNote("Your list is saved to your account \u2014 it will be the same on your other devices.");
       updateAccountUI();
