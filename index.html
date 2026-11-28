@@ -46,6 +46,16 @@
   .item{background:var(--card);border:1px solid var(--line);border-radius:6px;
         padding:0;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 6px rgba(31,42,68,.08);}
   .item .tear{height:10px;background:repeating-linear-gradient(90deg,var(--gold) 0 14px,transparent 14px 28px);}
+  .item.income .tear{background:repeating-linear-gradient(90deg,#2e7d4f 0 14px,transparent 14px 28px);}
+  .item.income .pill{background:#e2f2e7;color:#256b42;}
+  .item.income .pill.far{background:#eef0f4;color:var(--navy);}
+  .moneypic{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:14px 16px;margin-bottom:18px;}
+  .moneypic .label{font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--grey);}
+  .moneypic .big{font-size:24px;font-weight:800;color:var(--navy-dark);margin-top:2px;}
+  .moneypic .sub{color:var(--grey);margin-top:2px;}
+  #incBtn{width:100%;font-size:21px;margin:4px 0 18px;background:#2e7d4f;border-color:#256b42;color:#fff;}
+  .incsec h2{font-size:21px;color:var(--navy-dark);}
   .item .body{padding:12px 16px 14px;}
   .item .top{display:flex;gap:14px;align-items:flex-start;}
   .dateblock{flex:0 0 64px;text-align:center;border:2px solid var(--navy);border-radius:10px;overflow:hidden;}
@@ -125,6 +135,8 @@
 
   <div class="nextup" id="nextUp"></div>
 
+  <div class="moneypic" id="moneyPic" hidden></div>
+
   <button id="addBtn">＋ Add a trial or subscription</button>
 
   <form id="addForm" hidden>
@@ -153,7 +165,35 @@
     <p class="hint">No bank login. No connecting accounts. It only knows what you type here.</p>
   </form>
 
+  <button id="incBtn">\uFF0B Add money coming in</button>
+
+  <form id="incForm" hidden>
+    <input type="hidden" id="iId">
+    <label for="iName">What is it?</label>
+    <input id="iName" type="text" placeholder="Like: School paycheck" autocomplete="off">
+    <label for="iAmt">How much?</label>
+    <input id="iAmt" type="number" step="0.01" min="0" inputmode="decimal" placeholder="900.00">
+    <label for="iDate">When does it land next?</label>
+    <input id="iDate" type="date">
+    <label for="iRepeat">How often?</label>
+    <select id="iRepeat">
+      <option value="none">Just this once</option>
+      <option value="weekly">Every week</option>
+      <option value="biweekly">Every 2 weeks (payday)</option>
+      <option value="monthly">Every month</option>
+      <option value="yearly">Every year</option>
+    </select>
+    <label for="iNote">Anything to remember? (optional)</label>
+    <input id="iNote" type="text" placeholder="Like: the big check, or the little one" autocomplete="off">
+    <div class="rowbtns">
+      <button type="submit" id="iSaveBtn">Save it</button>
+      <button type="button" class="plain" id="iCancelBtn">Never mind</button>
+    </div>
+    <p class="hint">Money you type here is yours alone \u2014 same list, same account, no bank login.</p>
+  </form>
+
   <div id="list"></div>
+  <div class="incsec" id="incSec"></div>
   <div class="done-sec" id="doneSec"></div>
 </main>
 <footer>Trials &amp; Subs — a little list that watches your dates, so a surprise charge never does.<br><br>💌 <a href="https://mary-beth-s-finds.kit.com/joinfree?from=trialsandsubs">Join my email list</a> — Mary Beth's Finds: new finds, printables, and app news, straight to your inbox. No spam, just the good stuff.</footer>
@@ -707,7 +747,8 @@ function prettyDate(dateStr){
 function money(n){ return "$" + Number(n).toFixed(2); }
 function rollForward(dateStr, repeat){
   var d = new Date(dateStr + "T00:00:00");
-  if (repeat === "monthly") d.setMonth(d.getMonth() + 1);
+  if (repeat === "weekly") d.setDate(d.getDate() + 7);
+  else if (repeat === "monthly") d.setMonth(d.getMonth() + 1);
   else if (repeat === "biweekly") d.setDate(d.getDate() + 14);
   else if (repeat === "yearly") d.setFullYear(d.getFullYear() + 1);
   else return dateStr;
@@ -723,6 +764,24 @@ function daysWord(n){
   return "in " + n + " days";
 }
 
+function monthlyAmount(it){
+  var a = Number(it.amount) || 0;
+  if (it.repeat === "monthly") return a;
+  if (it.repeat === "biweekly") return a * 26 / 12;
+  if (it.repeat === "weekly") return a * 52 / 12;
+  if (it.repeat === "yearly") return a / 12;
+  return 0;
+}
+function incomeDaysWord(n){
+  if (n < 0) return "was due " + Math.abs(n) + (Math.abs(n) === 1 ? " day ago" : " days ago");
+  if (n === 0) return "lands TODAY";
+  if (n === 1) return "lands tomorrow";
+  return "lands in " + n + " days";
+}
+function repeatWord(r){
+  return r === "monthly" ? " \u00B7 every month" : (r === "biweekly" ? " \u00B7 every 2 weeks" : (r === "weekly" ? " \u00B7 every week" : (r === "yearly" ? " \u00B7 every year" : " \u00B7 one time")));
+}
+
 /* ---- Render ---- */
 var items = load();
 var listEl = document.getElementById("list");
@@ -730,8 +789,10 @@ var doneEl = document.getElementById("doneSec");
 var nextEl = document.getElementById("nextUp");
 
 function render(){
-  var active = items.filter(function(i){ return i.status === "active"; });
+  var active = items.filter(function(i){ return i.status === "active" && i.kind !== "income"; });
   active.sort(function(a,b){ return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+  var income = items.filter(function(i){ return i.status === "active" && i.kind === "income"; });
+  income.sort(function(a,b){ return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
   var done = items.filter(function(i){ return i.status !== "active"; });
 
   if (active.length === 0){
@@ -758,6 +819,36 @@ function render(){
   } else {
     doneEl.innerHTML = "";
   }
+
+  var picEl = document.getElementById("moneyPic");
+  if (income.length === 0){
+    picEl.hidden = true; picEl.innerHTML = "";
+  } else {
+    var inMo = 0, outMo = 0;
+    income.forEach(function(i){ inMo += monthlyAmount(i); });
+    active.forEach(function(i){ outMo += monthlyAmount(i); });
+    picEl.hidden = false;
+    if (inMo > 0){
+      var left = inMo - outMo;
+      picEl.innerHTML = '<div class="label">Your money picture, month to month</div>' +
+        '<div class="big">' + money(inMo) + " in \u00B7 " + money(outMo) + ' out</div>' +
+        '<div class="sub">' + (left >= 0
+          ? "That leaves about " + money(left) + " a month after everything on the list charges."
+          : "That is about " + money(Math.abs(left)) + " more going out than coming in each month \u2014 worth a look.") +
+        " One-time money is not counted in these monthly numbers.</div>";
+    } else {
+      picEl.innerHTML = '<div class="label">Your money picture, month to month</div>' +
+        '<div class="big">' + money(outMo) + ' going out a month</div>' +
+        '<div class="sub">Add a repeating payday below and I will show you what is left after the list charges. One-time money is not counted in the monthly numbers.</div>';
+    }
+  }
+
+  var incEl = document.getElementById("incSec");
+  if (income.length === 0){
+    incEl.innerHTML = "";
+  } else {
+    incEl.innerHTML = "<h2>\uD83D\uDCB0 Money coming in</h2>" + income.map(itemHtml).join("");
+  }
   wireButtons();
 }
 function esc(s){
@@ -771,18 +862,18 @@ function itemHtml(i){
   var dparts = i.date.split("-");
   var dobj = new Date(i.date + "T00:00:00");
   var moShort = dobj.toLocaleDateString("en-US", { month: "short" });
-  var html = '<div class="item' + (i.status !== "active" ? " done" : "") + '">';
+  var isInc = i.kind === "income";
+  var html = '<div class="item' + (isInc ? " income" : "") + (i.status !== "active" ? " done" : "") + '">';
   html += '<div class="tear"></div><div class="body">';
   html += '<div class="top"><div class="dateblock"><div class="mo">' + moShort + '</div><div class="dy">' +
     Number(dparts[2]) + '</div></div><div class="name">' + esc(i.name) + '</div><div class="amt">' + money(i.amount) + "</div></div>";
   if (i.status === "active"){
-    html += '<span class="pill ' + pillCls + '">' + daysWord(n) + "</span>";
-    html += '<div class="when">' + prettyDate(i.date) +
-      (i.repeat === "monthly" ? " \u00B7 every month" : (i.repeat === "biweekly" ? " \u00B7 every 2 weeks" : (i.repeat === "yearly" ? " \u00B7 every year" : " \u00B7 one time"))) + "</div>";
+    html += '<span class="pill ' + pillCls + '">' + (isInc ? incomeDaysWord(n) : daysWord(n)) + "</span>";
+    html += '<div class="when">' + prettyDate(i.date) + repeatWord(i.repeat) + "</div>";
   } else {
-    html += '<div class="when">Was due ' + prettyDate(i.date) + "</div>";
+    html += '<div class="when">' + (isInc ? "Was coming in " : "Was due ") + prettyDate(i.date) + "</div>";
   }
-  if (Array.isArray(i.history) && i.history.length > 1) {
+  if (!isInc && Array.isArray(i.history) && i.history.length > 1) {
     var firstAmt = Number(i.history[0].amount), curAmt = Number(i.amount);
     var diff = Math.round((curAmt - firstAmt) * 100) / 100;
     if (diff !== 0) {
@@ -791,15 +882,21 @@ function itemHtml(i){
         " \u2014 it was " + money(firstAmt) + " when you added it.</div>";
     }
   }
-  if (i.lastPaid) html += '<div class="note">\u2713 Paid ' + prettyDate(i.lastPaid) + "</div>";
+  if (!isInc && i.lastPaid) html += '<div class="note">\u2713 Paid ' + prettyDate(i.lastPaid) + "</div>";
+  if (isInc && i.lastGot) html += '<div class="note">\u2713 Last one landed ' + prettyDate(i.lastGot) + "</div>";
   if (i.note) html += '<div class="note">' + esc(i.note) + "</div>";
-  if (i.steps) html += "<details><summary>How to cancel it</summary><div class=\"steps\">" + esc(i.steps) + "</div></details>";
-  if (i.status === "active"){
+  if (!isInc && i.steps) html += "<details><summary>How to cancel it</summary><div class=\"steps\">" + esc(i.steps) + "</div></details>";
+  if (i.status === "active" && !isInc){
     var lk = linkFor(i.name);
     if (lk) html += '<a class="btnlink" href="' + lk.url + '" target="_blank" rel="noopener">' + esc(lk.label) + " \u2192</a>";
   }
   html += '<div class="actions">';
-  if (i.status === "active"){
+  if (i.status === "active" && isInc){
+    html += '<button class="small" data-act="gotit" data-id="' + i.id + '">\u2713 Got it</button>';
+    html += '<button class="small plain" data-act="editinc" data-id="' + i.id + '">Fix it</button>';
+    html += '<button class="small danger" data-act="del" data-id="' + i.id + '">Take it off</button>';
+  }
+  else if (i.status === "active"){
     html += '<button class="small" data-act="cancelled" data-id="' + i.id + '">I cancelled it</button>';
     if (i.repeat !== "none") html += '<button class="small plain" data-act="paid" data-id="' + i.id + '">\u2713 I paid it</button>';
     html += '<button class="small plain" data-act="kept" data-id="' + i.id + '">' +
@@ -855,6 +952,15 @@ function wireButtons(){
         });
         return;
       }
+      else if (act === "gotit"){
+        it.lastGot = todayStr();
+        if (it.repeat === "none"){ it.status = "handled"; }
+        else {
+          it.date = rollForward(it.date, it.repeat);
+          while (daysUntil(it.date) < 0) it.date = rollForward(it.date, it.repeat);
+        }
+      }
+      else if (act === "editinc"){ openIncForm(it); return; }
       else if (act === "edit"){ openForm(it); return; }
       save(items);
       render();
@@ -929,6 +1035,55 @@ form.addEventListener("submit", function(ev){
   stepsTouched = false;
   save(items);
   form.hidden = true;
+  render();
+});
+
+/* ---- Income add / edit form ---- */
+var incForm = document.getElementById("incForm");
+var incBtn = document.getElementById("incBtn");
+var iId = document.getElementById("iId"), iName = document.getElementById("iName"),
+    iAmt = document.getElementById("iAmt"), iDate = document.getElementById("iDate"),
+    iRepeat = document.getElementById("iRepeat"), iNote = document.getElementById("iNote");
+
+function openIncForm(it){
+  incForm.hidden = false;
+  if (it){
+    iId.value = it.id; iName.value = it.name; iAmt.value = it.amount;
+    iDate.value = it.date; iRepeat.value = it.repeat; iNote.value = it.note || "";
+    document.getElementById("iSaveBtn").textContent = "Save the fix";
+  } else {
+    iId.value = ""; iName.value = ""; iAmt.value = ""; iDate.value = "";
+    iRepeat.value = "biweekly"; iNote.value = "";
+    document.getElementById("iSaveBtn").textContent = "Save it";
+  }
+  incForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  iName.focus();
+}
+incBtn.addEventListener("click", function(){ openIncForm(null); });
+document.getElementById("iCancelBtn").addEventListener("click", function(){ incForm.hidden = true; });
+
+incForm.addEventListener("submit", function(ev){
+  ev.preventDefault();
+  var name = iName.value.trim();
+  var amt = parseFloat(iAmt.value);
+  var date = iDate.value;
+  if (!name){ window.alert("Give it a name first \u2014 where does this money come from?"); iName.focus(); return; }
+  if (isNaN(amt) || amt < 0){ window.alert("How much lands? Put the amount in."); iAmt.focus(); return; }
+  if (!date){ window.alert("When does it land next? Pick the date."); iDate.focus(); return; }
+  if (iId.value){
+    items.forEach(function(x){
+      if (x.id === iId.value){
+        x.name = name; x.amount = Math.round(amt * 100) / 100; x.date = date;
+        x.repeat = iRepeat.value; x.note = iNote.value.trim(); x.status = "active"; x.kind = "income";
+      }
+    });
+  } else {
+    items.push({ id: "in" + Date.now(), kind: "income", name: name,
+      amount: Math.round(amt * 100) / 100, date: date, repeat: iRepeat.value,
+      steps: "", note: iNote.value.trim(), status: "active" });
+  }
+  save(items);
+  incForm.hidden = true;
   render();
 });
 
