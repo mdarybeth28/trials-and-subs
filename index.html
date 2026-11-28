@@ -1001,7 +1001,7 @@ function openForm(it){
     fId.value = it.id; fName.value = it.name; fAmt.value = it.amount;
     fDate.value = it.date; fRepeat.value = it.repeat; fSteps.value = it.steps || "";
     fNote.value = it.note || "";
-    document.getElementById("saveBtn").textContent = "Save the fix";
+    document.getElementById("saveBtn").textContent = it.id ? "Save the fix" : "Save it";
   } else {
     fId.value = ""; fName.value = ""; fAmt.value = ""; fDate.value = "";
     fRepeat.value = "none"; fSteps.value = ""; fNote.value = "";
@@ -1069,7 +1069,7 @@ function openIncForm(it){
   if (it){
     iId.value = it.id; iName.value = it.name; iAmt.value = it.amount;
     iDate.value = it.date; iRepeat.value = it.repeat; iNote.value = it.note || "";
-    document.getElementById("iSaveBtn").textContent = "Save the fix";
+    document.getElementById("iSaveBtn").textContent = it.id ? "Save the fix" : "Save it";
   } else {
     iId.value = ""; iName.value = ""; iAmt.value = ""; iDate.value = "";
     iRepeat.value = "biweekly"; iNote.value = "";
