@@ -152,6 +152,7 @@
     <label for="fRepeat">How often?</label>
     <select id="fRepeat">
       <option value="none">Just this once</option>
+      <option value="weekly">Every week</option>
       <option value="monthly">Every month</option>
       <option value="lastday">On the last day of the month</option>
       <option value="biweekly">Every 2 weeks (payday)</option>
@@ -163,6 +164,7 @@
     <input id="fNote" type="text" placeholder="Like: only cancel after the trial ends" autocomplete="off">
     <div class="rowbtns">
       <button type="submit" id="saveBtn">Save it</button>
+      <button type="button" class="plain" id="flipToInc">This is money coming in instead</button>
       <button type="button" class="plain" id="cancelBtn">Never mind</button>
     </div>
     <p class="hint">No bank login. No connecting accounts. It only knows what you type here.</p>
@@ -191,6 +193,7 @@
     <input id="iNote" type="text" placeholder="Like: the big check, or the little one" autocomplete="off">
     <div class="rowbtns">
       <button type="submit" id="iSaveBtn">Save it</button>
+      <button type="button" class="plain" id="flipToCharge">This is a charge instead</button>
       <button type="button" class="plain" id="iCancelBtn">Never mind</button>
     </div>
     <p class="hint">Money you type here is yours alone \u2014 same list, same account, no bank login.</p>
@@ -1103,6 +1106,20 @@ incForm.addEventListener("submit", function(ev){
   render();
 });
 
+/* ---- Flip a form to the other kind (the photo reader can guess wrong) ---- */
+document.getElementById("flipToInc").addEventListener("click", function(){
+  var it = { id: "", name: fName.value.trim(), amount: parseFloat(fAmt.value) || "",
+             date: fDate.value, repeat: fRepeat.value, note: fNote.value.trim() };
+  form.hidden = true;
+  openIncForm(it);
+});
+document.getElementById("flipToCharge").addEventListener("click", function(){
+  var it = { id: "", name: iName.value.trim(), amount: parseFloat(iAmt.value) || "",
+             date: iDate.value, repeat: iRepeat.value, note: iNote.value.trim(), steps: "" };
+  incForm.hidden = true;
+  openForm(it);
+});
+
 /* ---- Photo reader: snap a bill, a signup screen or a pay stub ---- */
 var photoBtn = document.getElementById("photoBtn");
 var photoFile = document.getElementById("photoFile");
@@ -1118,9 +1135,8 @@ function normalizeSubRead(data){
   if (!/^\d{4}-\d{2}-\d{2}$/.test(nd) || isNaN(new Date(nd + "T12:00:00").getTime())) nd = todayStr();
   var repeat = READER_REPEATS.indexOf(d.repeat) >= 0 ? d.repeat : "monthly";
   var note = typeof d.note === "string" ? d.note.trim().slice(0, 200) : "";
-  var base = { id: "", name: name, amount: amount, nextDate: nd, repeat: repeat, note: note };
-  if (d.kind === "income"){ base.kind = "income"; return base; }
-  base.link = ""; base.cancelSteps = []; base.priceHistory = [];
+  var base = { id: "", name: name, amount: amount, date: nd, repeat: repeat, note: note, steps: "" };
+  if (d.kind === "income"){ base.kind = "income"; }
   return base;
 }
 function setPhotoBusy(busy){
