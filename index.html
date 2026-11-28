@@ -151,6 +151,7 @@
     <select id="fRepeat">
       <option value="none">Just this once</option>
       <option value="monthly">Every month</option>
+      <option value="lastday">On the last day of the month</option>
       <option value="biweekly">Every 2 weeks (payday)</option>
       <option value="yearly">Every year</option>
     </select>
@@ -181,6 +182,7 @@
       <option value="weekly">Every week</option>
       <option value="biweekly">Every 2 weeks (payday)</option>
       <option value="monthly">Every month</option>
+      <option value="lastday">On the last day of the month</option>
       <option value="yearly">Every year</option>
     </select>
     <label for="iNote">Anything to remember? (optional)</label>
@@ -748,7 +750,15 @@ function money(n){ return "$" + Number(n).toFixed(2); }
 function rollForward(dateStr, repeat){
   var d = new Date(dateStr + "T00:00:00");
   if (repeat === "weekly") d.setDate(d.getDate() + 7);
-  else if (repeat === "monthly") d.setMonth(d.getMonth() + 1);
+  else if (repeat === "monthly"){
+    var day0 = d.getDate();
+    d.setDate(1); d.setMonth(d.getMonth() + 1);
+    d.setDate(Math.min(day0, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  }
+  else if (repeat === "lastday"){
+    d.setDate(1); d.setMonth(d.getMonth() + 1);
+    d.setDate(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate());
+  }
   else if (repeat === "biweekly") d.setDate(d.getDate() + 14);
   else if (repeat === "yearly") d.setFullYear(d.getFullYear() + 1);
   else return dateStr;
@@ -766,7 +776,7 @@ function daysWord(n){
 
 function monthlyAmount(it){
   var a = Number(it.amount) || 0;
-  if (it.repeat === "monthly") return a;
+  if (it.repeat === "monthly" || it.repeat === "lastday") return a;
   if (it.repeat === "biweekly") return a * 26 / 12;
   if (it.repeat === "weekly") return a * 52 / 12;
   if (it.repeat === "yearly") return a / 12;
@@ -779,7 +789,7 @@ function incomeDaysWord(n){
   return "lands in " + n + " days";
 }
 function repeatWord(r){
-  return r === "monthly" ? " \u00B7 every month" : (r === "biweekly" ? " \u00B7 every 2 weeks" : (r === "weekly" ? " \u00B7 every week" : (r === "yearly" ? " \u00B7 every year" : " \u00B7 one time")));
+  return r === "monthly" ? " \u00B7 every month" : (r === "lastday" ? " \u00B7 last day of the month" : (r === "biweekly" ? " \u00B7 every 2 weeks" : (r === "weekly" ? " \u00B7 every week" : (r === "yearly" ? " \u00B7 every year" : " \u00B7 one time"))));
 }
 
 /* ---- Render ---- */
