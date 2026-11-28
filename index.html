@@ -55,6 +55,8 @@
   .moneypic .big{font-size:24px;font-weight:800;color:var(--navy-dark);margin-top:2px;}
   .moneypic .sub{color:var(--grey);margin-top:2px;}
   #incBtn{width:100%;font-size:21px;margin:4px 0 18px;background:#2e7d4f;border-color:#256b42;color:#fff;}
+  #photoBtn{width:100%;font-size:21px;margin:0 0 18px;background:#c9930a;border-color:#a87c08;color:#fff;}
+  #photoBtn:disabled{opacity:.65;}
   .incsec h2{font-size:21px;color:var(--navy-dark);}
   .item .body{padding:12px 16px 14px;}
   .item .top{display:flex;gap:14px;align-items:flex-start;}
@@ -194,6 +196,9 @@
     <p class="hint">Money you type here is yours alone \u2014 same list, same account, no bank login.</p>
   </form>
 
+  <button id="photoBtn">📸 Add from a photo</button>
+  <input id="photoFile" type="file" accept="image/*" hidden>
+
   <div id="list"></div>
   <div class="incsec" id="incSec"></div>
   <div class="done-sec" id="doneSec"></div>
@@ -217,6 +222,7 @@ var KEY = "beforeItCharges.v1";
    for the page to break. */
 var SUPABASE_URL = "https://adzsednmhwqpqxdzdpra.supabase.co";
 var SUPABASE_ANON_KEY = "sb_publishable_Hk04D9MCowX2tk_9cmklzw_dxiOACEr";
+var READER_URL = SUPABASE_URL + "/functions/v1/read-sub";
 /* =============== END ACCOUNT CONFIG =============== */
 
 /* ---- Cancel-steps library: the taps, spelled out, for services people ask about most ---- */
@@ -1096,6 +1102,76 @@ incForm.addEventListener("submit", function(ev){
   incForm.hidden = true;
   render();
 });
+
+/* ---- Photo reader: snap a bill, a signup screen or a pay stub ---- */
+var photoBtn = document.getElementById("photoBtn");
+var photoFile = document.getElementById("photoFile");
+var READER_REPEATS = ["none", "weekly", "biweekly", "monthly", "lastday", "yearly"];
+function normalizeSubRead(data){
+  var d = (data && data.item) ? data.item : data;
+  if (!d || typeof d !== "object") return null;
+  var name = typeof d.name === "string" ? d.name.trim().slice(0, 80) : "";
+  if (!name) return null;
+  var amount = parseFloat(d.amount);
+  if (!(amount > 0)) amount = 0;
+  var nd = typeof d.nextDate === "string" ? d.nextDate : "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(nd) || isNaN(new Date(nd + "T12:00:00").getTime())) nd = todayStr();
+  var repeat = READER_REPEATS.indexOf(d.repeat) >= 0 ? d.repeat : "monthly";
+  var note = typeof d.note === "string" ? d.note.trim().slice(0, 200) : "";
+  var base = { id: "", name: name, amount: amount, nextDate: nd, repeat: repeat, note: note };
+  if (d.kind === "income"){ base.kind = "income"; return base; }
+  base.link = ""; base.cancelSteps = []; base.priceHistory = [];
+  return base;
+}
+function setPhotoBusy(busy){
+  photoBtn.disabled = busy;
+  photoBtn.textContent = busy ? "Reading your photo..." : "📸 Add from a photo";
+}
+photoBtn.addEventListener("click", function(){
+  if (!sb){ toast("The photo reader needs an account — adding by hand works the same."); return; }
+  sb.auth.getSession().then(function(res){
+    var sess = res && res.data ? res.data.session : null;
+    if (!sess){ toast("Sign in first, then the photo reader can help — adding by hand works the same."); return; }
+    photoFile.value = "";
+    photoFile.click();
+  });
+});
+photoFile.addEventListener("change", function(){
+  var file = photoFile.files && photoFile.files[0];
+  if (file) readSubPhoto(file);
+});
+function readSubPhoto(file){
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function(){
+    var max = 1600, w = img.naturalWidth || 1, h = img.naturalHeight || 1;
+    var sc = Math.min(1, max / Math.max(w, h));
+    var cw = Math.max(1, Math.round(w * sc)), ch = Math.max(1, Math.round(h * sc));
+    var c = document.createElement("canvas"); c.width = cw; c.height = ch;
+    c.getContext("2d").drawImage(img, 0, 0, cw, ch);
+    URL.revokeObjectURL(url);
+    var b64 = c.toDataURL("image/jpeg", 0.85).split(",")[1];
+    sb.auth.getSession().then(function(res){
+      var sess = res && res.data ? res.data.session : null;
+      if (!sess){ toast("Sign in first, then the photo reader can help."); return; }
+      setPhotoBusy(true);
+      fetch(READER_URL, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + sess.access_token, "apikey": SUPABASE_ANON_KEY }, body: JSON.stringify({ image_base64: b64, mime_type: "image/jpeg" }) })
+      .then(function(r){ return r.json().then(function(data){ return { ok: r.ok, status: r.status, data: data }; }).catch(function(){ return { ok: false, status: r.status, data: null }; }); })
+      .then(function(out){
+        setPhotoBusy(false);
+        if (out.status === 404){ toast("The photo reader isn't switched on yet — adding by hand works the same."); return; }
+        if (!out.ok || !out.data || out.data.error){ toast((out.data && out.data.error) || "I couldn't read that one — try another picture, or add it by hand."); return; }
+        var norm = normalizeSubRead(out.data);
+        if (!norm){ toast("I couldn't find a charge or a payment in that photo — try another picture, or add it by hand."); return; }
+        if (norm.kind === "income") openIncForm(norm); else openForm(norm);
+        toast("Read from your photo — check it over, then Save.");
+      })
+      .catch(function(){ setPhotoBusy(false); toast("The reader couldn't be reached just now — adding by hand works the same."); });
+    });
+  };
+  img.onerror = function(){ URL.revokeObjectURL(url); toast("That photo couldn't be opened — try another one, or add it by hand."); };
+  img.src = url;
+}
 
 render();
 initAccounts();
